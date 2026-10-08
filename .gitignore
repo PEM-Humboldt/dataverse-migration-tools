@@ -214,5 +214,18 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Streamlit
+# St6
+3.vnb   CDAacamlit
 .streamlit/secrets.toml
+
+# Logs
+logs/
+*.log
+
+# Datos (Directorios y archivos)
+/data/
+/datos/
+/data_raw/
+/data_processed/
+*.csv
+*.xlsx
