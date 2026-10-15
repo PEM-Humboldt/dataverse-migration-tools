@@ -54,8 +54,8 @@ Para obtener todos los metadatos y archivos de los datasets de BioCultural ejecu
 python3 -m src.ingest.biocultural_ingest
 ```
 
-Los metadatos se almacenarán en la ruta establecida en el atributo `metadata_directory` del [config.json](/src/config.json)
-Los archivos se almacenarán en la ruta establecida en el atributo `files_directory` del [config.json](/src/config.json), dentro de una subcarpeta para cada DOI.
+Los metadatos se almacenarán en la ruta establecida en el atributo `metadata_directory` del [config.json](/src/config.json). Si se mantiene la ruta definida, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
+Los archivos se almacenarán en la ruta establecida en el atributo `files_directory` del [config.json](/src/config.json), dentro de una subcarpeta para cada DOI. Si se mantiene la ruta definida, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
 
 ## Logs
 Podrá encontrar los archivos de logs en la carpeta [logs](/src/logs/).
