@@ -1,0 +1,10 @@
+{
+    "biocultural": {
+        "origin_url": "http://dataverse.localhost",
+        "origin_api_token": "72ef630d-3d48-490b-b062-b0fa7833ac7e",
+        "dataverse_names": [":root", "iavh_i2d_biocultural"],
+        "doi_prefix": "doi:10.21068",
+        "metadata_directory": "data/biocultural/raw/",
+        "files_directory": "data/biocultural/files/"
+    }   
+}
