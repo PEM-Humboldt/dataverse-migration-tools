@@ -15,3 +15,7 @@ class Config:
         self.dv_data_dir = os.getenv('BIOCULTURAL_DATA_DIR')
         
         self.api_origin = NativeApi(self.dv_origin_url, self.dv_origin_api_token)
+
+        self.ceiba_origin_path = conf['ceiba']['origin_path']
+        self.ceiba_metadata_directory = conf['ceiba']['metadata_directory']
+        self.ceiba_files_directory = conf['ceiba']['files_directory']
