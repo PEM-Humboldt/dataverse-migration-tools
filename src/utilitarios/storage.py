@@ -29,3 +29,10 @@ def save_file(response, file_directory, id, current_v, filename):
     else:
         print(f"Error {response.status_code} al descargar el ZIP de {id}_{current_v} - ERROR: {response.text}")
         logger.error(f"ERROR getting files for {id}_{current_v}")
+
+def load_json_metadata(file_directory, filename):
+    file = BASE_DIR / file_directory / filename
+    
+    with open(file, "r", encoding='UTF-8') as f:
+        metadata_dict = json.load(f)
+    return metadata_dict

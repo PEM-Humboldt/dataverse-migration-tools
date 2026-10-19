@@ -68,9 +68,15 @@ def download_files(DOI, pid, current_v):
         api_url = f"/api/access/dataset/:persistentId/?persistentId={DOI}"
         url = config.dv_origin_url + api_url 
 
+        params = {
+            "persistentId": DOI,
+            "format": "original"
+        }
+
         response = requests.get(
             url=url,
             headers={"X-Dataverse-key": config.dv_origin_api_token},
+            params=params,
             stream=True,
             allow_redirects=True
         )
