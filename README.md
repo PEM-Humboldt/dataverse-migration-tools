@@ -16,16 +16,18 @@ El repositorio se estructura de la siguiente manera:
 ### Ambiente virtual
 Para correr los scripts de este repositorio es necesario generar un ambiente virtual de python:
 ```sh
-python3 -m venv <nombre_ambiente>
+python3 -m venv venv
 ```
+
+> Nota: Es posible cambiar el nombre del ambiente si se prefiere. En caso de que lo haga, ubique el ambiente fuera de la carpeta del repositorio o agregue el nombre del ambiente al archivo .gitignore para evitar versionarlo por error.
 
 Actívelo con:
 ```sh
 # En Linux
-. <nombre_ambiente>/bin/activate
+. venv/bin/activate
 
 # En Windows
-.\<nombre_ambiente>\Scripts\Activate.ps1
+.\venv\Scripts\Activate.ps1
 ```
 
 Instale las librerías necesarias con:
