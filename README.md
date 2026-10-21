@@ -43,6 +43,9 @@ Se tiene un archivo de variables de ambiente [.env.example](/.env.example):
     BIOCULTURAL_ORIGIN_API_TOKEN="" # Token de usuario administrador de instancia de BioCultural de origen
     BIOCULTURAL_DATA_DIR="" # Ruta relativa donde se almacenarán los datos de biocultural
 
+    # Ceiba
+    CEIBA_ORIGIN_PATH="/ruta/a/carpeta/resources" # Ruta absoluta a la carpeta con los recursos
+
     METADATA_DIR="raw" # Nombre de la carpeta donde se almacenarán los metadatos
     FILES_DIR="files"  # Nombre de la carpeta donde se almacenarán los archivos
 ```
