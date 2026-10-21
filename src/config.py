@@ -16,6 +16,6 @@ class Config:
         
         self.api_origin = NativeApi(self.dv_origin_url, self.dv_origin_api_token)
 
-        self.ceiba_origin_path = conf['ceiba']['origin_path']
-        self.ceiba_metadata_directory = conf['ceiba']['metadata_directory']
-        self.ceiba_files_directory = conf['ceiba']['files_directory']
+        self.ceiba_origin_path = os.getenv('CEIBA_ORIGIN_PATH')
+        self.ceiba_metadata_directory = os.getenv('CEIBA_METADATA_DIR')
+        self.ceiba_files_directory = os.getenv('CEIBA_FILES_DIR')
