@@ -214,8 +214,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# St6
-3.vnb   CDAacamlit
+# Streamlit
 .streamlit/secrets.toml
 
 # Logs
@@ -232,5 +231,5 @@ logs/
 
 
 # Rstudio project
-
+.Rproj.user/
 **/**.Rproj
