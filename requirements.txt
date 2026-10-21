@@ -1,0 +1,2 @@
+requests==2.34.2        # HTTP client for the Dataverse API (DataverseReader)
+python-dotenv==1.2.4    # reads the URL and the token from .env

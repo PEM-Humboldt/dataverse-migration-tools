@@ -1,0 +1,4 @@
+# Biocultural base URL
+BIO_DV_URL=https://biocultural.humboldt.org.co
+#API token from the administrative user (to have access to restricted files) from biocultural
+BIO_DV_API_TOKEN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX

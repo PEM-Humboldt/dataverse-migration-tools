@@ -229,3 +229,8 @@ logs/
 /data_processed/
 *.csv
 *.xlsx
+
+
+# Rstudio project
+
+**/**.Rproj
