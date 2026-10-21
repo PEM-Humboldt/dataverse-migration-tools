@@ -36,16 +36,18 @@ pip install -r requirements.txt
 ```
 
 ### Archivo de configuración
-Se tiene un archivo de configuración [config.json](/src/config.json):
+Se tiene un archivo de variables de ambiente [.env.example](/.env.example):
 ```sh
-    "biocultural": {
-        "origin_url": "http://dataverse.localhost", # URL de instancia de BioCultural de donde se descargarán los datos
-        "origin_api_token": "", # Token de usuario administrador de instancia de BioCultural de origen
-        "dataverse_names": [":root", "iavh_i2d_biocultural"], # Nombres de dataversos desde los que se necesitan hacer las descargas de los datos
-        "doi_prefix": "doi:10.21068", # Prefijo de DOI
-        "metadata_directory": "data/biocultural/raw/", # Ruta donde se almacenarán los metadatos
-        "files_directory": "data/biocultural/files/" # Ruta donde se almacenarán los archivos
-    }  
+    # Biocultural
+    BIOCULTURAL_ORIGIN_URL="http://dataverse.localhost" # URL de instancia de BioCultural de donde se descargarán los datos
+    BIOCULTURAL_ORIGIN_API_TOKEN="" # Token de usuario administrador de instancia de BioCultural de origen
+    BIOCULTURAL_METADATA_DIR="data/biocultural/raw/" # Ruta relativa donde se almacenarán los metadatos
+    BIOCULTURAL_FILES_DIR="data/biocultural/files/" # Ruta relativa donde se almacenarán los archivos
+```
+
+Genere su archivo `.env` copiando el `env.example`:
+```sh
+cp .env.example .env
 ```
 
 ## Ingesta de datos
