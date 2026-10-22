@@ -34,7 +34,7 @@ def harvest_server():
     except Exception as e:
         logger.exception("An error occured while harvesting the server!")
 
-def dataset_pid(item):
+def set_dataset_pid(item):
     """Persistent identifier of a `dataset` item of /contents (protocol, authority, separator, identifier).
 
     Built from the item's fields, not from a fixed prefix: some datasets have another
@@ -68,7 +68,7 @@ def get_datasets_pid():
             # Appends each dataset's pid
             for resource in content:
                 if resource.get('type') == 'dataset':
-                    pid = dataset_pid(resource)
+                    pid = set_dataset_pid(resource)
                     
                     pid_list.append(pid)
                     datasets.append({"persistent_id": pid, "dataset_id": resource["id"],
@@ -91,7 +91,7 @@ def get_datasets_pid():
 def fetch_all_versions(pid_list):
     """Loops over each dataset and:
     Returns a dictionary for each version and saves it as JSON
-    Downloads the files from each verion and saves them in a ZIP
+    Downloads the files from each version
     """
 
     logger.info("Fetching all versions from all datasets...")
@@ -151,6 +151,9 @@ def fetch_all_versions(pid_list):
     logger.info(f"Versions download completed for {len(pid_list)} datasets! {successes} versions succesfully downloaded - {fails} versions download fails")
 
 def download_files(pid, current_v):
+    """Makes an API call to download all files from version in a ZIP and saves them to disk
+    """
+        
     try:
         api_url = f"/api/access/dataset/:persistentId/?persistentId={pid}"
         url = config.dv_origin_url + api_url 
