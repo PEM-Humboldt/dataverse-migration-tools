@@ -1,0 +1,15 @@
+# Template of the local configuration of the GeoNetwork ingest.
+# Copy it as .env at the root of the repository and fill it in:  cp env-template .env
+# (or add these lines to the existing .env, next to those of the other sources).
+# .env is in .gitignore: never committed. This file (env-template) is, always without secret values.
+# No quotes around the values.
+
+# Base URL of the GeoNetwork I2D services (GeoNetwork 3.2.2), ending in /srv, without a trailing slash
+GN_URL=https://geonetwork.humboldt.org.co/geonetwork/srv
+
+# User name and password of an ADMINISTRATOR account of the catalogue (HTTP Basic authentication).
+# Administrator: with any other account the private records (54 in 2026-10) are silently missing;
+# the ingest checks the profile with /api/me and stops otherwise.
+# The ingest only sends GET requests, but the account can modify the catalogue: do not share it.
+GN_USER=
+GN_PASSWORD=

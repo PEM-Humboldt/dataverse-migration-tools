@@ -1,0 +1,2 @@
+requests==2.34.2        # HTTP client for the GeoNetwork API (GeoNetworkReader)
+python-dotenv==1.2.4    # reads the URL and the credentials from .env
