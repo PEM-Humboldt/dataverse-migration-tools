@@ -49,7 +49,7 @@ def get_datasets_pid():
     """
 
     logger.info("Fetching all PIDs from all datasets...")
-    pid_list = []
+    dataset_list = []
     datasets = []
     dv_list = [':root']
 
@@ -69,8 +69,9 @@ def get_datasets_pid():
             for resource in content:
                 if resource.get('type') == 'dataset':
                     pid = set_dataset_pid(resource)
+                    dv_id = resource.get('id')
                     
-                    pid_list.append(pid)
+                    dataset_list.append({'id': dv_id, 'pid': pid})
                     datasets.append({"persistent_id": pid, "dataset_id": resource["id"],
                                                      "collection": dv})
                     
@@ -85,10 +86,13 @@ def get_datasets_pid():
     # Write CSV inventory
     write_csv(datasets, config.dv_data_dir, "inventory.csv")
     
-    logger.info(f"PID recollection finished correctly: {len(pid_list)} PIDs collected.")
-    return pid_list
+    logger.info(f"PID recollection finished correctly: {len(dataset_list)} PIDs collected.")
+    return dataset_list
 
-def fetch_all_versions(pid_list):
+def get_identifier(pid):
+    return pid.split("/")[1]
+
+def fetch_all_versions(dataset_list):
     """Loops over each dataset and:
     Returns a dictionary for each version and saves it as JSON
     Downloads the files from each version
@@ -101,13 +105,16 @@ def fetch_all_versions(pid_list):
     current_v = 0
 
     # Loops over all datasets
-    for pid in pid_list:
+    for dataset in dataset_list:
+
+        id = dataset['id']
+        pid = dataset['pid']
         count = 0
         logger.info(f"======= Downloading metadata and files from {pid} =======")
 
         try:
             # Fetches all versions for current dataset
-            result = config.api_origin.get_dataset_versions(identifier=pid)
+            result = config.api_origin.get_dataset_versions(identifier=id, is_pid=False)
             versions = result.json()['data']
 
             # Loops over each version
@@ -129,7 +136,7 @@ def fetch_all_versions(pid_list):
                 }
 
                 # Creates filename using identifier (drops prefix) and version
-                identifier = pid.split("/")[1]
+                identifier = get_identifier(pid)
                 filename = f"{identifier}-{current_v}.json"
                 
                 # Saves version as JSON
@@ -148,7 +155,7 @@ def fetch_all_versions(pid_list):
             fails += 1
             logger.exception(f"Some error occured while downloading datasets version {current_v} for {pid} - ERROR: {e}")
 
-    logger.info(f"Versions download completed for {len(pid_list)} datasets! {successes} versions succesfully downloaded - {fails} versions download fails")
+    logger.info(f"Versions download completed for {len(dataset_list)} datasets! {successes} versions succesfully downloaded - {fails} versions download fails")
 
 def download_files(pid, current_v):
     """Makes an API call to download all files from version in a ZIP and saves them to disk
@@ -172,7 +179,7 @@ def download_files(pid, current_v):
             allow_redirects=True
         )
 
-        identifier = pid.split("/")[1]
+        identifier = get_identifier(pid)
         folder_name = f"{identifier}-{current_v}"
 
         if response.status_code == 200:
@@ -190,8 +197,8 @@ def main():
     logger.info("Starting main...")
 
     harvest_server()
-    pid_list = get_datasets_pid()
-    fetch_all_versions(pid_list)
+    dataset_list = get_datasets_pid()
+    fetch_all_versions(dataset_list)
 
 if __name__ == "__main__":
     main()
