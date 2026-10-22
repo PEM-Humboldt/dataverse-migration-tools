@@ -155,7 +155,8 @@ def download_files(pid, current_v):
     """
         
     try:
-        api_url = f"/api/access/dataset/:persistentId/?persistentId={pid}"
+        version = ':draft' if current_v == 'DRAFT' else current_v
+        api_url = f"/api/access/dataset/:persistentId/versions/{version}?persistentId={pid}" #probar
         url = config.dv_origin_url + api_url 
 
         params = {
@@ -171,14 +172,16 @@ def download_files(pid, current_v):
             allow_redirects=True
         )
 
-        folder_name = f"{pid}-{current_v}"
+        identifier = pid.split("/")[1]
+        folder_name = f"{identifier}-{current_v}"
 
         if response.status_code == 200:
             # Saves files
             files_path = Path(config.dv_data_dir)/Path(config.files_dir)
             save_file_as_stream(response, files_path, folder_name, "files.zip")
         else:
-            logger.error(f"Error while fetching the files for {pid}, response is {response.status_code}")
+            api_message = response.json().get("message", "No details available")
+            logger.error(f"Error while fetching the files for {pid}, response is {response.status_code} - {api_message}")
     except Exception as e:
         logger.exception(f"An error occured while downloading the dataset's files for {pid} - ERROR: {e}")
 
