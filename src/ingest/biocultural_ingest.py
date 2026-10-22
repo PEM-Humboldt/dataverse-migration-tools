@@ -45,39 +45,49 @@ def set_dataset_pid(item):
 def get_datasets_pid():
     """Loops over all dataverses and gets all dataset's basic data. 
     Writes a CSV inventory to keep track of all datasets in each dataverse.
-    Returns a list of datasets PIDs
+    Writes two JSONs for each dataverse: one with dataverse data and one referencing all the datasets included
+    Returns a list of dictionarys of each dataset's ID and PID
     """
 
     logger.info("Fetching all PIDs from all datasets...")
     dataset_list = []
     datasets = []
-    dv_list = [':root']
+    dv_list = [{'id': 1, 'alias': ':root'}]
 
     # Fetches all dataverses alias
     dataverses = config.api_origin.get_children(children_types='dataverses')
-    for dv in dataverses : dv_list.append(dv.get('dataverse_alias'))
+    for dv in dataverses : dv_list.append({'id': dv.get('dataverse_id'), 'alias': dv.get('dataverse_alias')})
 
     # Iterates over each dataverse
     for dv in dv_list:
+        dv_id = dv['id']
+        alias = dv['alias']
+        
         count = 0
         try:
+            # Fetches dataverse data
+            dv_data = config.api_origin.get_dataverse(dv_id)
+            write_json(dv_data.json()['data'], Path(config.dv_data_dir) / "collections", f"{alias}.json")
+
             # Gets all datasets for each dataverse
-            r = config.api_origin.get_dataverse_contents(identifier=dv)
-            content = r.json()['data']
+            dv_contents = config.api_origin.get_dataverse_contents(identifier=alias)
+            content = dv_contents.json()['data']
+            write_json(content, Path(config.dv_data_dir) / "collections", f"{alias}_contents.json")
+
 
             # Appends each dataset's pid
             for resource in content:
                 if resource.get('type') == 'dataset':
                     pid = set_dataset_pid(resource)
-                    dv_id = resource.get('id')
+                    ds_id = resource.get('id')
                     
-                    dataset_list.append({'id': dv_id, 'pid': pid})
+                    dataset_list.append({'id': ds_id, 'pid': pid})
                     datasets.append({"persistent_id": pid, "dataset_id": resource["id"],
-                                                     "collection": dv})
+                                                     "collection": alias})
                     
                     count += 1
 
-            logger.info(f"{count} PIDs collected from dataverse {dv}.")
+            logger.info(f"{count} PIDs collected from dataverse {alias}.")
 
         except Exception as e:
             logger.exception(f"An error occured while fetching the PIDS: {e}")
