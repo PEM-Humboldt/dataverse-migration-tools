@@ -41,8 +41,10 @@ Se tiene un archivo de variables de ambiente [.env.example](/.env.example):
     # Biocultural
     BIOCULTURAL_ORIGIN_URL="http://dataverse.localhost" # URL de instancia de BioCultural de donde se descargarán los datos
     BIOCULTURAL_ORIGIN_API_TOKEN="" # Token de usuario administrador de instancia de BioCultural de origen
-    BIOCULTURAL_METADATA_DIR="data/biocultural/raw/" # Ruta relativa donde se almacenarán los metadatos
-    BIOCULTURAL_FILES_DIR="data/biocultural/files/" # Ruta relativa donde se almacenarán los archivos
+    BIOCULTURAL_DATA_DIR="" # Ruta relativa donde se almacenarán los datos de biocultural
+
+    METADATA_DIR="raw" # Nombre de la carpeta donde se almacenarán los metadatos
+    FILES_DIR="files"  # Nombre de la carpeta donde se almacenarán los archivos
 ```
 
 Genere su archivo `.env` copiando el `env.example`:
