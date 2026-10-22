@@ -1,13 +1,56 @@
+from pathlib import Path
+
 from src.config import Config
 import requests
 from src.utilitarios.logger import logger
-from src.utilitarios.storage import save_json_metadata, save_file_as_stream
+from src.utilitarios.files import write_json, save_file_as_stream, write_csv
 
 config = Config()
 
+def harvest_server():
+    """Dataverse version and metadata block definitions
+
+    The list of blocks is requested to discover their names ;
+    only the definitions are saved.
+    """
+
+    logger.info("Harvesting server ...")
+
+    try:
+        version = config.api_origin.get_info_version()
+        write_json(version.json(), config.dv_data_dir, "version.json")
+
+        r = config.api_origin.get_metadatablocks()
+        metadatablocks = r.json()['data']
+
+        for block in metadatablocks:
+            b = config.api_origin.get_metadatablock(block['name'])
+
+            path = Path(config.dv_data_dir) / "metadatablocks"
+            file_name = f"{block['name']}.json"
+            write_json(b.json()['data'], path , file_name)
+
+        logger.info(f"The server was succesfully harvested! Check your data directory.")
+    except Exception as e:
+        logger.exception("An error occured while harvesting the server!")
+
+def dataset_pid(item):
+    """Persistent identifier of a `dataset` item of /contents (protocol, authority, separator, identifier).
+
+    Built from the item's fields, not from a fixed prefix: some datasets have another
+    prefix (doi:10.5072/FK2/MH9E0K, a DataCite test DOI).
+    """
+    return f"{item['protocol']}:{item['authority']}{item.get('separator', '/')}{item['identifier']}"
+
 def get_datasets_pid():
+    """Loops over all dataverses and gets all dataset's basic data. 
+    Writes a CSV inventory to keep track of all datasets in each dataverse.
+    Returns a list of datasets PIDs
+    """
+
     logger.info("Fetching all PIDs from all datasets...")
     pid_list = []
+    datasets = []
     dv_list = [':root']
 
     # Fetches all dataverses alias
@@ -19,22 +62,38 @@ def get_datasets_pid():
         count = 0
         try:
             # Gets all datasets for each dataverse
-            content = config.api_origin.get_children(parent=dv, children_types='datasets')
+            r = config.api_origin.get_dataverse_contents(identifier=dv)
+            content = r.json()['data']
 
             # Appends each dataset's pid
             for resource in content:
-                count += 1
-                pid_list.append(resource.get('pid'))
+                if resource.get('type') == 'dataset':
+                    pid = dataset_pid(resource)
+                    
+                    pid_list.append(pid)
+                    datasets.append({"persistent_id": pid, "dataset_id": resource["id"],
+                                                     "collection": dv})
+                    
+                    count += 1
 
             logger.info(f"{count} PIDs collected from dataverse {dv}.")
 
         except Exception as e:
             logger.exception(f"An error occured while fetching the PIDS: {e}")
 
+    
+    # Write CSV inventory
+    write_csv(datasets, config.dv_data_dir, "inventory.csv")
+    
     logger.info(f"PID recollection finished correctly: {len(pid_list)} PIDs collected.")
     return pid_list
 
 def fetch_all_versions(pid_list):
+    """Loops over each dataset and:
+    Returns a dictionary for each version and saves it as JSON
+    Downloads the files from each verion and saves them in a ZIP
+    """
+
     logger.info("Fetching all versions from all datasets...")
 
     successes = 0
@@ -74,7 +133,8 @@ def fetch_all_versions(pid_list):
                 filename = f"{identifier}-{current_v}.json"
                 
                 # Saves version as JSON
-                save_json_metadata(version_record, config.dv_metadata_directory, filename)
+                json_path = Path(config.dv_data_dir)/Path(config.metadata_dir)
+                write_json(version_record, json_path, filename)
                 logger.info(f"Verion {current_v} metadata for dataset {pid} correctly saved as JSON.")
 
                 # Download version's files as ZIP
@@ -112,7 +172,8 @@ def download_files(pid, current_v):
 
         if response.status_code == 200:
             # Saves files
-            save_file_as_stream(response, config.dv_files_directory, folder_name, "files.zip")
+            files_path = Path(config.dv_data_dir)/Path(config.files_dir)
+            save_file_as_stream(response, files_path, folder_name, "files.zip")
         else:
             logger.error(f"Error while fetching the files for {pid}, response is {response.status_code}")
     except Exception as e:
@@ -121,6 +182,8 @@ def download_files(pid, current_v):
 def main():
     logger.info("=============== Ingesting BioCultural's resources ===============")
     logger.info("Starting main...")
+
+    harvest_server()
     pid_list = get_datasets_pid()
     fetch_all_versions(pid_list)
 

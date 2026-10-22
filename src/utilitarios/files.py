@@ -1,20 +1,43 @@
 import json
+import csv
+import io
 from pathlib import Path
 from src.utilitarios.logger import logger
+
 
 # Raíz del proyecto (3 niveles arriba desde src/utils/storage.py)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-def save_json_metadata(data, metadata_directory, filename):
+def write_json(data, path, filename):
     try:
-        raw_dir = BASE_DIR / metadata_directory
-        raw_dir.mkdir(parents=True, exist_ok=True)
-        raw_filepath = raw_dir / filename
+        raw_dirpath = BASE_DIR / path
+        raw_dirpath.mkdir(parents=True, exist_ok=True)
+        raw_filepath = raw_dirpath / filename
 
         with open(raw_filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         raise RuntimeError(f"An error ocurred while saving the JSON file in {raw_filepath}") from e
+
+def read_csv(path):
+    """Read a UTF-8 CSV file with a header row; return a list of dictionaries."""
+    return list(csv.DictReader(io.StringIO(Path(path).read_text(encoding="utf-8"))))
+
+
+def write_csv(rows, path, filename, fieldnames=None):
+    try:
+        raw_dirpath = BASE_DIR / path
+        raw_dirpath.mkdir(parents=True, exist_ok=True)
+        raw_filepath = raw_dirpath / filename
+
+        fieldnames = fieldnames or (list(rows[0]) if rows else [])
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+        raw_filepath.write_text(buf.getvalue(), encoding="utf-8")
+    except Exception as e:
+        raise RuntimeError(f"An error occured while writing the CSV in {raw_dirpath}") from e
 
 def save_file_as_stream(response, file_directory, folder_name, filename):
     try:
