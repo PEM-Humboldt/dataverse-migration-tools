@@ -5,6 +5,13 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+def read_json(file_directory, filename):
+    file = BASE_DIR / file_directory / filename
+    
+    with open(file, "r", encoding='UTF-8') as f:
+        metadata_dict = json.load(f)
+    return metadata_dict
+
 def write_json(data, path, filename):
     try:
         raw_dirpath = BASE_DIR / path
@@ -20,7 +27,6 @@ def read_csv(path):
     """Read a UTF-8 CSV file with a header row; return a list of dictionaries."""
     return list(csv.DictReader(io.StringIO(Path(path).read_text(encoding="utf-8"))))
 
-
 def write_csv(rows, path, filename, fieldnames=None):
     try:
         raw_dirpath = BASE_DIR / path
@@ -35,6 +41,10 @@ def write_csv(rows, path, filename, fieldnames=None):
         raw_filepath.write_text(buf.getvalue(), encoding="utf-8")
     except Exception as e:
         raise RuntimeError(f"An error occured while writing the CSV in {raw_dirpath}") from e
+
+def read_csv(path):
+    """Read a UTF-8 CSV file with a header row; return a list of dictionaries."""
+    return list(csv.DictReader(io.StringIO(Path(path).read_text(encoding="utf-8"))))
 
 def save_file_as_stream(response, file_directory, folder_name, filename):
     try:
@@ -59,10 +69,3 @@ def save_file_as_stream(response, file_directory, folder_name, filename):
             part_filepath.unlink()
 
         raise IOError(f"An error ocurred while saving the ZIP in {final_filepath}") from e
-
-def load_json_metadata(file_directory, filename):
-    file = BASE_DIR / file_directory / filename
-    
-    with open(file, "r", encoding='UTF-8') as f:
-        metadata_dict = json.load(f)
-    return metadata_dict
