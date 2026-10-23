@@ -114,16 +114,11 @@ def process_metadata(resource_dir):
 def main():
     logger.info("=============== Ingesting Ceiba resources ===============")
     logger.info("Starting main...")
-<<<<<<< HEAD
-
-=======
->>>>>>> 07af12a (Ingest metadata and files from Ceiba resources)
     resources = read_resources()
     logger.info("All resources fetched!")
 
     successes = 0
     fails = 0
-<<<<<<< HEAD
 
     inventory = read_csv(config.ceiba_inventory)
     for r in resources:
@@ -138,14 +133,6 @@ def main():
             successes+=1 
         except Exception as e:
             logger.exception(f"Failed to process resource {r} - ERROR")
-=======
-    for r in resources:
-        response = read_xml(r)
-
-        if response == True:
-            successes+=1 
-        else:
->>>>>>> 07af12a (Ingest metadata and files from Ceiba resources)
             fails += 1
 
     logger.info(f"Ceiba ingest finished - Number of SUCCESS: {successes} | Number of FAILS: {fails}")
