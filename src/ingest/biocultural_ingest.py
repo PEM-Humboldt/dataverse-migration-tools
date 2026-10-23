@@ -42,6 +42,21 @@ def set_dataset_pid(item):
     """
     return f"{item['protocol']}:{item['authority']}{item.get('separator', '/')}{item['identifier']}"
 
+def fetch_all_dataverses():
+    logger.info("Fetching all Dataverses...")
+
+    dv_list = [{'id': 1, 'alias': ':root'}]
+
+    # Fetches all dataverses alias
+    dataverses = config.api_origin.get_children(children_types='dataverses')
+    for dv in dataverses: 
+        dv_list.append({
+            'id': dv.get('dataverse_id'), 
+            'alias': dv.get('dataverse_alias')
+        })
+
+    return dv_list
+
 def get_datasets_pid():
     """Loops over all dataverses and gets all dataset's basic data. 
     Writes a CSV inventory to keep track of all datasets in each dataverse.
@@ -52,11 +67,8 @@ def get_datasets_pid():
     logger.info("Fetching all PIDs from all datasets...")
     dataset_list = []
     datasets = []
-    dv_list = [{'id': 1, 'alias': ':root'}]
 
-    # Fetches all dataverses alias
-    dataverses = config.api_origin.get_children(children_types='dataverses')
-    for dv in dataverses : dv_list.append({'id': dv.get('dataverse_id'), 'alias': dv.get('dataverse_alias')})
+    dv_list = fetch_all_dataverses()
 
     # Iterates over each dataverse
     for dv in dv_list:
@@ -73,7 +85,6 @@ def get_datasets_pid():
             dv_contents = config.api_origin.get_dataverse_contents(identifier=alias)
             content = dv_contents.json()['data']
             write_json(content, Path(config.dv_data_dir) / "collections", f"{alias}_contents.json")
-
 
             # Appends each dataset's pid
             for resource in content:
