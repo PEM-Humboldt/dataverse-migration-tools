@@ -1,120 +1,139 @@
 from src.config import Config
 import xmltodict
-from src.utilitarios.storage import save_json_metadata
+from src.utilitarios.files import read_csv, write_json
 import os
 import re
-import json
 from pathlib import Path
 from src.utilitarios.logger import logger
 
-
 config = Config()
 EML_PATTERN = re.compile(r"^eml(?:-(\d+)(?:\.(\d+))?)?\.xml$")
+OUTPUT_DIR = f"{config.ceiba_data_dir}/{config.metadata_dir}"
+
+def extract_resource_name(url):
+    regex = re.compile(r"[?&]r=([^&]+)")
+    match = regex.search(url)
+    return match.group(1) if match else ""
 
 def read_resources():
+    """Returns the path for each existing resource"""
     base_path = Path(config.ceiba_origin_path)
     return [resource for resource in base_path.iterdir() if resource.is_dir()]
 
-# Compares all eml's files and returns latest
-def get_latest_eml_version(resource_dir):
-
+def get_latest_eml(resource_dir):
+    """Returns the latest eml file for the given resource"""
     latest_version = None
     latest_filename = None
 
-    try:
-        for file in os.listdir(resource_dir):
+    for file in os.listdir(resource_dir):
 
-            match = EML_PATTERN.match(file)
-            if match:
-                v_major_str, v_minor_str = match.groups()
+        match = EML_PATTERN.match(file)
+        if match:
+            v_major_str, v_minor_str = match.groups()
 
-                if v_major_str is None:
-                    version_tuple = (0, 0, False)
-                else:
-                    major = int(v_major_str)
-                    has_minor = v_minor_str is not None
-                    minor = int(v_minor_str) if has_minor else 0
+            if v_major_str is None:
+                version_tuple = (0, 0, False)
+            else:
+                major = int(v_major_str)
+                has_minor = v_minor_str is not None
+                minor = int(v_minor_str) if has_minor else 0
 
-                    version_tuple = (major, minor, has_minor)
+                version_tuple = (major, minor, has_minor)
 
-                if latest_version is None or version_tuple > latest_version:
-                    latest_version = version_tuple
-                    latest_filename = os.path.splitext(file)[0]
+            if latest_version is None or version_tuple > latest_version:
+                latest_version = version_tuple
+                latest_filename = os.path.splitext(file)[0]
+
+    if latest_filename is None:
+        logger.warning(f"No EML file was found for the {resource_dir.name} resource")
+
+    return latest_filename
     
-        return latest_filename
-    except Exception as e:
-        logger.exception(f"An exception occured while getting latest eml version for {resource_dir.name} - {e}")
+def export_file_references(resource_dir, version = None):
+    """Gets files absolute paths and saves them in a dictionary"""
 
-def save_files_path(resource_dir, write_dir, version = None):
-    filespath = {}
-    try:
-        if version is not None:
-            filespath['zip_filepath'] = f"dwca-{version}.zip"
-            filespath['rtf_filepath'] = f"{resource_dir.name}-{version}.rtf"
-            
-        else:
-            filespath['zip_filepath'] = f"dwca.zip"
-            filespath['rtf_filepath'] = f"{resource_dir.name}.rtf"
+    files_directory = {}
 
-        sources_dir = resource_dir / "sources"
-
-        if sources_dir.exists() and sources_dir.is_dir():
-            for file in os.listdir(sources_dir):
-                if str(file).endswith(".txt"):
-                    filespath[file] = f"{file}"
-
-        output_filepath = f"{write_dir}/files.json"
-        with open(output_filepath, 'w', encoding='UTF-8') as jf:
-            json.dump(filespath, jf, ensure_ascii=False, indent=4)
-    except Exception as e:
-        logger.exception(f"An exception occured while saving file references for {resource_dir.name} - {e}")
-
-def read_xml(resource_dir):
-    resource_name = get_latest_eml_version(resource_dir)
-
-    if resource_name is None:
-        files = ["resource"]
+    if version is not None:
+        files_directory['zip_filepath'] = f"{resource_dir}/dwca-{version}.zip"
+        files_directory['rtf_filepath'] = f"{resource_dir}/{resource_dir.name}-{version}.rtf"
+        
     else:
-        files = ["resource", resource_name]
+        files_directory['zip_filepath'] = f"{resource_dir}/dwca.zip"
+        files_directory['rtf_filepath'] = f"{resource_dir}/{resource_dir.name}.rtf"
 
-    write_dir = f"{config.ceiba_metadata_directory}/{resource_dir.name}"
-    try:
-        for f in files:
-            filepath = resource_dir / f"{f}.xml"
+    sources_dir = resource_dir / "sources"
 
-            if not filepath.exists():
-                print("El archivo no existe")
-                continue
+    if sources_dir.exists() and sources_dir.is_dir():
+        for file in os.listdir(sources_dir):
+            if str(file).endswith(".txt"):
+                files_directory[file] = f"{resource_dir}/{file}"
 
-            with open(filepath, 'r', encoding="UTF-8") as xml_file:
-                data_dict = xmltodict.parse(xml_file.read())
+    write_json(files_directory, f"{OUTPUT_DIR}/{resource_dir.name}", 'files.json')
 
-            save_json_metadata(data_dict, write_dir, f, "")
+def attach_inventory_data(inventory, resource_dict, identifier):
+    """Compares current resource identifier to find corresponding row in I2D Inventory"""
+    
+    target_row = {}
+    for row in inventory:
+        url = row.get('URL CEIBA')
+        if url.startswith(("http://", "https://")):
+            extracted_name = extract_resource_name(url)
+            if extracted_name == identifier:
+                target_row = row
+                break
+    
+    return resource_dict | {"inventory": target_row}
 
-        if resource_name and "-" in resource_name:
-            save_files_path(resource_dir, write_dir, resource_name.split("-")[1])
-        else:
-            save_files_path(resource_dir, write_dir, None)
+def process_metadata(resource_dir):
+    """Transform XML files and inventory record to python dicts to merge them all into a single JSON file
+    """
+    eml_file = get_latest_eml(resource_dir)
 
-        return True
-    except Exception as e:
-        logger.exception(f"An exception occured while parsing XML to JSON in {resource_dir.name} - {e}")
-        return False
+    latest_version = eml_file.split("-")[1] if eml_file and "-" in eml_file else None
+    files = ["resource"] if eml_file is None else ["resource", eml_file]
+    
+    resource_dictionary = {}
+    for f in files:
+        filepath = resource_dir / f"{f}.xml"
+
+        if not filepath.exists():
+            logger.warning(f"File for {resource_dir.name} doesn't exist.")
+            continue
+
+        with open(filepath, 'r', encoding="UTF-8") as xml_file:
+            data_dict = xmltodict.parse(xml_file.read())
+            resource_dictionary = resource_dictionary | data_dict
+
+    return {
+        'resource_dict': resource_dictionary,
+        'latest_version': latest_version,
+        'ceiba_identifier': resource_dir.name
+    }
 
 def main():
     logger.info("=============== Ingesting Ceiba resources ===============")
     logger.info("Starting main...")
+
     resources = read_resources()
     logger.info("All resources fetched!")
 
     successes = 0
     fails = 0
-    for r in resources:
-        response = read_xml(r)
 
-        if response == True:
+    inventory = read_csv(config.ceiba_inventory)
+    for r in resources:
+        try:
+            data = process_metadata(r)
+
+            full_dict = attach_inventory_data(inventory, data['resource_dict'], data['ceiba_identifier'])
+            write_json(full_dict, f"{OUTPUT_DIR}/{r.name}", "resource_metadata.json")
+
+            export_file_references(r, data['latest_version'])
+
             successes+=1 
-        else:
+        except Exception as e:
+            logger.exception(f"Failed to process resource {r} - ERROR")
             fails += 1
 
     logger.info(f"Ceiba ingest finished - Number of SUCCESS: {successes} | Number of FAILS: {fails}")
