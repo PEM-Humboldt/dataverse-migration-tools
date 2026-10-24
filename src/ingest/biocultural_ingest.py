@@ -16,31 +16,27 @@ def harvest_server():
 
     logger.info("Harvesting server ...")
 
-    try:
-        version = config.api_origin.get_info_version()
-        write_json(version.json(), config.dv_data_dir, "version.json")
+    version = config.api_origin.get_info_version()
 
-        r = config.api_origin.get_metadatablocks()
-        metadatablocks = r.json()['data']
+    path = Path(config.dv_data_dir)
+    write_json(version.json(), path, "version.json")
 
-        for block in metadatablocks:
-            b = config.api_origin.get_metadatablock(block['name'])
+    save_metadatablocks(path)
 
-            path = Path(config.dv_data_dir) / "metadatablocks"
-            file_name = f"{block['name']}.json"
-            write_json(b.json()['data'], path , file_name)
+    logger.info(f"The server was succesfully harvested! Check your data directory.")
 
-        logger.info(f"The server was succesfully harvested! Check your data directory.")
-    except Exception as e:
-        logger.exception("An error occured while harvesting the server!")
+def save_metadatablocks(path):
+    r = config.api_origin.get_metadatablocks()
+    metadatablocks = r.json()['data']
 
-def set_dataset_pid(item):
-    """Persistent identifier of a `dataset` item of /contents (protocol, authority, separator, identifier).
+    for block in metadatablocks:
+        b = config.api_origin.get_metadatablock(block['name'])
 
-    Built from the item's fields, not from a fixed prefix: some datasets have another
-    prefix (doi:10.5072/FK2/MH9E0K, a DataCite test DOI).
-    """
-    return f"{item['protocol']}:{item['authority']}{item.get('separator', '/')}{item['identifier']}"
+        filepath =  path / "metadatablocks"
+        file_name = f"{block['name']}.json"
+        write_json(b.json()['data'], filepath , file_name)
+
+    logger.info(f"The server's metadatablocks were succesfully saved! Check your data directory.")  
 
 def fetch_all_dataverses():
     logger.info("Fetching all Dataverses...")
@@ -57,169 +53,170 @@ def fetch_all_dataverses():
 
     return dv_list
 
-def get_datasets_pid():
-    """Loops over all dataverses and gets all dataset's basic data. 
-    Writes a CSV inventory to keep track of all datasets in each dataverse.
-    Writes two JSONs for each dataverse: one with dataverse data and one referencing all the datasets included
+def fetch_dataverse_content(alias):
+    # Gets all datasets for each dataverse
+    dv_contents = config.api_origin.get_dataverse_contents(identifier=alias)
+    content = dv_contents.json()['data']
+
+    return content
+
+def extract_dataset_pids(content, alias):
+    """
     Returns a list of dictionarys of each dataset's ID and PID
     """
 
-    logger.info("Fetching all PIDs from all datasets...")
-    dataset_list = []
     datasets = []
+    count = 0
 
-    dv_list = fetch_all_dataverses()
+    for resource in content:
+        if resource.get('type') == 'dataset':
+            pid = build_pid(resource)
+            ds_id = resource.get('id')
+            
+            datasets.append({"dataset_id": ds_id, "persistent_id": pid, "dv_alias": alias})
+            count += 1
 
-    # Iterates over each dataverse
-    for dv in dv_list:
-        dv_id = dv['id']
-        alias = dv['alias']
-        
-        count = 0
-        try:
-            # Fetches dataverse data
-            dv_data = config.api_origin.get_dataverse(dv_id)
-            write_json(dv_data.json()['data'], Path(config.dv_data_dir) / "collections", f"{alias}.json")
+    logger.info(f"{count} PIDs collected from dataverse.")
 
-            # Gets all datasets for each dataverse
-            dv_contents = config.api_origin.get_dataverse_contents(identifier=alias)
-            content = dv_contents.json()['data']
-            write_json(content, Path(config.dv_data_dir) / "collections", f"{alias}_contents.json")
-
-            # Appends each dataset's pid
-            for resource in content:
-                if resource.get('type') == 'dataset':
-                    pid = set_dataset_pid(resource)
-                    ds_id = resource.get('id')
-                    
-                    dataset_list.append({'id': ds_id, 'pid': pid})
-                    datasets.append({"persistent_id": pid, "dataset_id": resource["id"],
-                                                     "collection": alias})
-                    
-                    count += 1
-
-            logger.info(f"{count} PIDs collected from dataverse {alias}.")
-
-        except Exception as e:
-            logger.exception(f"An error occured while fetching the PIDS: {e}")
-
+    return datasets
     
-    # Write CSV inventory
-    write_csv(datasets, config.dv_data_dir, "inventory.csv")
-    
-    logger.info(f"PID recollection finished correctly: {len(dataset_list)} PIDs collected.")
-    return dataset_list
-
-def get_identifier(pid):
-    return pid.split("/")[1]
-
-def fetch_all_versions(dataset_list):
-    """Loops over each dataset and:
-    Returns a dictionary for each version and saves it as JSON
+def fetch_dataset_versions(dataset):
+    """Returns a dictionary for each version and saves it as JSON
     Downloads the files from each version
     """
 
-    logger.info("Fetching all versions from all datasets...")
-
-    successes = 0
-    fails = 0
     current_v = 0
+    id = dataset.get('dataset_id')
+    pid = dataset.get('persistent_id')
 
-    # Loops over all datasets
-    for dataset in dataset_list:
+    logger.info(f"======= Downloading metadata and files from {pid} =======")
 
-        id = dataset['id']
-        pid = dataset['pid']
-        count = 0
-        logger.info(f"======= Downloading metadata and files from {pid} =======")
+    # Fetches all versions for current dataset
+    result = config.api_origin.get_dataset_versions(identifier=id, is_pid=False)
+    versions = result.json()['data']
 
-        try:
-            # Fetches all versions for current dataset
-            result = config.api_origin.get_dataset_versions(identifier=id, is_pid=False)
-            versions = result.json()['data']
+    # Loops over each version
+    for version in versions:
 
-            # Loops over each version
-            for version in versions:
+        # Gets current version number
+        identifier = extract_pid_identifier(pid)
+        current_v = get_dataset_version(version)
+        filename = f"{identifier}-{current_v}.json"
 
-                # Gets current version number
-                if 'versionNumber' in version:
-                    v = version['versionNumber']
-                    vm = version['versionMinorNumber']
-                    current_v = f"{v}.{vm}"
-                else:
-                    v = version['versionState']
-                    current_v = v
-
-                # Sets correct version format
-                version_record = {
-                    "metadataLanguage": "es", 
-                    "datasetVersion": version
-                }
-
-                # Creates filename using identifier (drops prefix) and version
-                identifier = get_identifier(pid)
-                filename = f"{identifier}-{current_v}.json"
-                
-                # Saves version as JSON
-                json_path = Path(config.dv_data_dir)/Path(config.metadata_dir)
-                write_json(version_record, json_path, filename)
-                logger.info(f"Verion {current_v} metadata for dataset {pid} correctly saved as JSON.")
-
-                # Download version's files as ZIP
-                download_files(pid, current_v)
-                logger.info(f"Version's {current_v} metadata for dataset {pid} correctly saved as JSON.")
-                count += 1
-                successes += 1
-
-            logger.info(f"For dataset {pid}, {count} version(s) succesfully downloaded.")
-        except Exception as e:
-            fails += 1
-            logger.exception(f"Some error occured while downloading datasets version {current_v} for {pid} - ERROR: {e}")
-
-    logger.info(f"Versions download completed for {len(dataset_list)} datasets! {successes} versions succesfully downloaded - {fails} versions download fails")
-
-def download_files(pid, current_v):
-    """Makes an API call to download all files from version in a ZIP and saves them to disk
-    """
-        
-    try:
-        version = ':draft' if current_v == 'DRAFT' else current_v
-        api_url = f"/api/access/dataset/:persistentId/versions/{version}?persistentId={pid}" #probar
-        url = config.dv_origin_url + api_url 
-
-        params = {
-            "persistentId": pid,
-            "format": "original"
+        version_record = {
+            "metadataLanguage": "es", 
+            "datasetVersion": version
         }
 
-        response = requests.get(
-            url=url,
-            headers={"X-Dataverse-key": config.dv_origin_api_token},
-            params=params,
-            stream=True,
-            allow_redirects=True
-        )
+        json_path = Path(config.dv_data_dir)/Path(config.metadata_dir)
+        write_json(version_record, json_path, filename)
 
-        identifier = get_identifier(pid)
-        folder_name = f"{identifier}-{current_v}"
+        download_version_files(pid, current_v)
 
-        if response.status_code == 200:
-            # Saves files
-            files_path = Path(config.dv_data_dir)/Path(config.files_dir)
-            save_file_as_stream(response, files_path, folder_name, "files.zip")
-        else:
-            api_message = response.json().get("message", "No details available")
-            logger.error(f"Error while fetching the files for {pid}, response is {response.status_code} - {api_message}")
-    except Exception as e:
-        logger.exception(f"An error occured while downloading the dataset's files for {pid} - ERROR: {e}")
+    logger.info(f"For dataset {pid}, {len(versions)} version(s) succesfully downloaded.")
+
+def download_version_files(pid, current_v):
+    """Makes an API call to download all files from version in a ZIP and saves them to disk
+    """
+    version = ':draft' if current_v == 'DRAFT' else current_v
+    api_url = f"/api/access/dataset/:persistentId/versions/{version}"
+    url = config.dv_origin_url + api_url 
+
+    params = {
+        "persistentId": pid,
+        "format": "original"
+    }
+
+    response = requests.get(
+        url=url,
+        headers={"X-Dataverse-key": config.dv_origin_api_token},
+        params=params,
+        stream=True,
+        allow_redirects=True
+    )
+
+    identifier = extract_pid_identifier(pid)
+    folder_name = f"{identifier}-{current_v}"
+
+    if response.status_code == 200:
+        files_path = Path(config.dv_data_dir)/Path(config.files_dir)
+        save_file_as_stream(response, files_path, folder_name, "files.zip")
+    else:
+        api_message = response.json().get("message", "No details available")
+        raise RuntimeError(f"Error while fetching the files for {pid}, response is {response.status_code} - {api_message}")
+
+def extract_pid_identifier(pid):
+    return pid.split("/")[1]
+
+def get_dataset_version(metadata):
+    if 'versionNumber' in metadata:
+        v = metadata.get('versionNumber')
+        vm = metadata.get('versionMinorNumber', 0)
+        return f"{v}.{vm}"
+    else:
+        v = metadata.get('versionState')
+        return v
+
+def build_pid(item):
+    """Persistent identifier of a `dataset` item of /contents (protocol, authority, separator, identifier).
+
+    Built from the item's fields, not from a fixed prefix: some datasets have another
+    prefix (doi:10.5072/FK2/MH9E0K, a DataCite test DOI).
+    """
+    return f"{item['protocol']}:{item['authority']}{item.get('separator', '/')}{item['identifier']}"
 
 def main():
     logger.info("=============== Ingesting BioCultural's resources ===============")
     logger.info("Starting main...")
 
-    harvest_server()
-    dataset_list = get_datasets_pid()
-    fetch_all_versions(dataset_list)
+    try:
+        harvest_server()
+        dataverses = fetch_all_dataverses()
+    except Exception as e:
+        logger.exception("Fatal error during server harvesting! Aborting process.")
+        return
 
+    successes = 0
+    fails = 0
+    all_datasets = []
+    collections_dir = Path(config.dv_data_dir) / "collections"
+
+    for dv in dataverses:
+        dv_id = dv['id']
+        alias = dv['alias']
+
+        logger.info(f"Starting to fetch data from {alias} dataverse...")
+            
+        try:
+            # Fetches general Dataverse data
+            dv_data = config.api_origin.get_dataverse(dv_id)
+            write_json(dv_data.json()['data'], collections_dir, f"{alias}.json")
+
+            # Gets a resume of the content inside the current dataverse
+            content = fetch_dataverse_content(alias)
+            write_json(content, collections_dir, f"{alias}_contents.json")
+
+            # Get's ID and PID of each dataset inside current dataverse
+            dataset_list = extract_dataset_pids(content, alias)
+            all_datasets.extend(dataset_list)
+
+        except Exception as e:
+            logger.exception(f"Failed to fetch metadata or contents for dataverse {alias}. Skipping.")
+            continue
+
+        for dataset in dataset_list:
+            pid = dataset.get('persistent_id')
+            try:
+                fetch_dataset_versions(dataset)
+                successes+=1
+            except Exception as e:
+                fails+=1
+                logger.exception(f"Failed to process dataset {pid}")
+
+    # Write CSV inventory
+    if all_datasets:
+        write_csv(all_datasets, config.dv_data_dir, "inventory.csv")
+
+    logger.info(f"Process finished. A total of {successes + fails} datasets reviewed. Number of successes: {successes} - Number of {fails}")
 if __name__ == "__main__":
     main()
