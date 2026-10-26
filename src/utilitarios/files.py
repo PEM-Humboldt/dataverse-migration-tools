@@ -2,10 +2,7 @@ import json
 import csv
 import io
 from pathlib import Path
-from src.utilitarios.logger import logger
 
-
-# Raíz del proyecto (3 niveles arriba desde src/utils/storage.py)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 def write_json(data, path, filename):
