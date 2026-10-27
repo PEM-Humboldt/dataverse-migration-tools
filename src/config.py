@@ -19,3 +19,5 @@ class Config:
 
         self.ceiba_origin_path = os.getenv('CEIBA_ORIGIN_PATH')
         self.ceiba_data_dir = os.getenv('CEIBA_DATA_DIR')
+        
+        self.gn_origin_url = os.getenv('GN_URL')
