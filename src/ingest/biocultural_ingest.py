@@ -1,23 +1,20 @@
 from pathlib import Path
-
 from src.config import Config
 import requests
+from src.formato.biocultural_format import extract_dataset_pids, extract_pid_identifier, extract_dataset_version, format_version_record
 from src.utilitarios.logger import logger
 from src.utilitarios.files import write_json, save_file_as_stream, write_csv
 
 config = Config()
 
 def harvest_server():
-    """Dataverse version and metadata block definitions
-
-    The list of blocks is requested to discover their names ;
-    only the definitions are saved.
+    """
+    Dataverse version and metadata block definitions
     """
 
     logger.info("Harvesting server ...")
 
     version = config.api_origin.get_info_version()
-
     path = Path(config.dv_data_dir)
     write_json(version.json(), path, "version.json")
 
@@ -39,6 +36,10 @@ def save_metadatablocks(path):
     logger.info(f"The server's metadatablocks were succesfully saved! Check your data directory.")  
 
 def fetch_all_dataverses():
+    """
+    Fetches all dataverses and returns a list of their IDs and Alias
+    """
+    
     logger.info("Fetching all Dataverses...")
 
     dv_list = [{'id': 1, 'alias': ':root'}]
@@ -54,32 +55,14 @@ def fetch_all_dataverses():
     return dv_list
 
 def fetch_dataverse_content(alias):
-    # Gets all datasets for each dataverse
+    """
+    Gets all the content inside a dataverse, including other dataverses and datasets
+    """
     dv_contents = config.api_origin.get_dataverse_contents(identifier=alias)
     content = dv_contents.json()['data']
 
     return content
 
-def extract_dataset_pids(content, alias):
-    """
-    Returns a list of dictionarys of each dataset's ID and PID
-    """
-
-    datasets = []
-    count = 0
-
-    for resource in content:
-        if resource.get('type') == 'dataset':
-            pid = build_pid(resource)
-            ds_id = resource.get('id')
-            
-            datasets.append({"dataset_id": ds_id, "persistent_id": pid, "dv_alias": alias})
-            count += 1
-
-    logger.info(f"{count} PIDs collected from dataverse.")
-
-    return datasets
-    
 def fetch_dataset_versions(dataset):
     """Returns a dictionary for each version and saves it as JSON
     Downloads the files from each version
@@ -100,23 +83,18 @@ def fetch_dataset_versions(dataset):
 
         # Gets current version number
         identifier = extract_pid_identifier(pid)
-        current_v = get_dataset_version(version)
+        current_v = extract_dataset_version(version)
         filename = f"{identifier}-{current_v}.json"
 
-        version_record = {
-            "metadataLanguage": "es", 
-            "datasetVersion": version
-        }
-
-        json_path = Path(config.dv_data_dir)/Path(config.metadata_dir)
-        write_json(version_record, json_path, filename)
+        format_version_record(version, filename)
 
         download_version_files(pid, current_v)
 
     logger.info(f"For dataset {pid}, {len(versions)} version(s) succesfully downloaded.")
 
 def download_version_files(pid, current_v):
-    """Makes an API call to download all files from version in a ZIP and saves them to disk
+    """
+    Makes an API call to download all files from version in a ZIP and saves them to disk
     """
     version = ':draft' if current_v == 'DRAFT' else current_v
     api_url = f"/api/access/dataset/:persistentId/versions/{version}"
@@ -144,26 +122,6 @@ def download_version_files(pid, current_v):
     else:
         api_message = response.json().get("message", "No details available")
         raise RuntimeError(f"Error while fetching the files for {pid}, response is {response.status_code} - {api_message}")
-
-def extract_pid_identifier(pid):
-    return pid.split("/")[1]
-
-def get_dataset_version(metadata):
-    if 'versionNumber' in metadata:
-        v = metadata.get('versionNumber')
-        vm = metadata.get('versionMinorNumber', 0)
-        return f"{v}.{vm}"
-    else:
-        v = metadata.get('versionState')
-        return v
-
-def build_pid(item):
-    """Persistent identifier of a `dataset` item of /contents (protocol, authority, separator, identifier).
-
-    Built from the item's fields, not from a fixed prefix: some datasets have another
-    prefix (doi:10.5072/FK2/MH9E0K, a DataCite test DOI).
-    """
-    return f"{item['protocol']}:{item['authority']}{item.get('separator', '/')}{item['identifier']}"
 
 def main():
     logger.info("=============== Ingesting BioCultural's resources ===============")
