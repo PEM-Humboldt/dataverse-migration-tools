@@ -15,3 +15,5 @@ class Config:
         self.dv_data_dir = os.getenv('BIOCULTURAL_DATA_DIR')
         
         self.api_origin = NativeApi(self.dv_origin_url, self.dv_origin_api_token)
+
+        self.gn_origin_url = os.getenv('GN_URL')

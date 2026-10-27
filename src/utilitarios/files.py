@@ -1,6 +1,7 @@
 import json
 import csv
 import io
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -55,3 +56,15 @@ def load_json_metadata(file_directory, filename):
     with open(file, "r", encoding='UTF-8') as f:
         metadata_dict = json.load(f)
     return metadata_dict
+
+def write_bytes(content, path, filename):
+    """Write `content` (bytes) to `path` unchanged, atomically (`<name>.part`, then renamed).
+
+    For responses saved exactly as the source gave them (XML, JSON not re-encoded).
+    """
+    aw_dirpath = BASE_DIR / path / filename
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".part")
+    tmp.write_bytes(content)
+    os.replace(tmp, path)
