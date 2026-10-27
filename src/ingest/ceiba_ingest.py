@@ -1,19 +1,15 @@
 from src.config import Config
-import xmltodict
 from src.utilitarios.files import read_csv, write_json
 import os
 import re
 from pathlib import Path
+from src.formato.ceiba_format import xml_to_dict, attach_inventory_data
 from src.utilitarios.logger import logger
 
 config = Config()
 EML_PATTERN = re.compile(r"^eml(?:-(\d+)(?:\.(\d+))?)?\.xml$")
 OUTPUT_DIR = f"{config.ceiba_data_dir}/{config.metadata_dir}"
 
-def extract_resource_name(url):
-    regex = re.compile(r"[?&]r=([^&]+)")
-    match = regex.search(url)
-    return match.group(1) if match else ""
 
 def read_resources():
     """Returns the path for each existing resource"""
@@ -71,19 +67,7 @@ def export_file_references(resource_dir, version = None):
 
     write_json(files_directory, f"{OUTPUT_DIR}/{resource_dir.name}", 'files.json')
 
-def attach_inventory_data(inventory, resource_dict, identifier):
-    """Compares current resource identifier to find corresponding row in I2D Inventory"""
-    
-    target_row = {}
-    for row in inventory:
-        url = row.get('URL CEIBA')
-        if url.startswith(("http://", "https://")):
-            extracted_name = extract_resource_name(url)
-            if extracted_name == identifier:
-                target_row = row
-                break
-    
-    return resource_dict | {"inventory": target_row}
+
 
 def process_metadata(resource_dir):
     """Transform XML files and inventory record to python dicts to merge them all into a single JSON file
@@ -101,9 +85,8 @@ def process_metadata(resource_dir):
             logger.warning(f"File for {resource_dir.name} doesn't exist.")
             continue
 
-        with open(filepath, 'r', encoding="UTF-8") as xml_file:
-            data_dict = xmltodict.parse(xml_file.read())
-            resource_dictionary = resource_dictionary | data_dict
+        data_dict = xml_to_dict(filepath)
+        resource_dictionary = resource_dictionary | data_dict
 
     return {
         'resource_dict': resource_dictionary,
