@@ -63,8 +63,8 @@ def write_bytes(content, path, filename):
     For responses saved exactly as the source gave them (XML, JSON not re-encoded).
     """
     aw_dirpath = BASE_DIR / path / filename
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".part")
+    write_path = Path(aw_dirpath)
+    write_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = write_path.with_name(write_path.name + ".part")
     tmp.write_bytes(content)
-    os.replace(tmp, path)
+    os.replace(tmp, write_path)
