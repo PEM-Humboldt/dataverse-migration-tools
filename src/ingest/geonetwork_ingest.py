@@ -1,16 +1,21 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 from pathlib import Path
 import time
+import xmltodict
 import requests
 from src.config import Config
 from src.utilitarios.session import api_call    
-from src.utilitarios.files import write_bytes
+from src.formato.geonetwork_format import inventory_row
+from src.utilitarios.files import write_bytes, write_csv, write_json
+from src.utilitarios.logger import logger
 
 config = Config()
 PAGE_SIZE = 100
 
 def harvest_server():
     site = api_call("/api/site")
-    write_bytes(site.content, Path(config.gn_origin_url)/"server", "site.json")
+    write_json(site.json(), Path(config.gn_data_dir), "site.json")
 
     user = api_call("/api/me")
     profile = user.json().get("profile") if user.status_code == 200 and user.content else None
@@ -19,86 +24,161 @@ def harvest_server():
                            f"HTTP {user.status_code}); check GN_USER and GN_PASSWORD")
     
     groups = api_call("/api/groups", withReservedGroup="true")
-    write_bytes(groups.content, Path(config.gn_origin_url) / "server", "groups.json")
+    write_json(groups.json(), Path(config.gn_data_dir), "groups.json")
 
-    return site.json().get("system/platform/version")
-
-def q_records(page):
-    """Records of one page of the q service: `metadata` is a list, or a dict when the page has one record."""
+def extract_metadata(page):
+    """Returns resources in one page of the service."""
     records = page.get("metadata", [])
     return [records] if isinstance(records, dict) else records
 
-
-def q_count(page):
+def summary_count(page):
     """Total number of records, from the summary of a page requested with buildSummary=true."""
     return int(page["summary"]["@count"])
 
 def fetch_resources_page(start):
     end = start + PAGE_SIZE - 1
-    params = {"_content_type": "json", "fast": "index", "from": start, "to": end,
-                "_isTemplate": "n", "buildSummary": "true" if start == 1 else "false"}
-    r = reader.get("/eng/q", accept="*/*", **params)      # as in the prototype
-    write_bytes(r.content, run_dir / "inventory" / f"q_{start:05d}-{end:05d}.json")
+    params = {"_content_type": "json", "fast": "index", "from": start, "to": end, "_isTemplate": "n", "buildSummary": "true" if start == 1 else "false"}
+    r = api_call("/eng/q", accept="*/*", **params)
+
+    write_bytes(r.content, Path(config.gn_data_dir) / "inventory", f"q_{start:05d}-{end:05d}.json")
     return r.json()
 
-def inventory_row(rec):
-    """One row of inventory.csv from one record of the q service (flattened index values)."""
-    info = rec["geonet:info"]
-    user = (rec.get("userinfo") or "").split("|")      # user|surname|name|profile
-    return {
-        "uuid": info["uuid"],
-        "id": info["id"],
-        "schema": info["schema"],
-        "title": rec.get("defaultTitle", ""),           # `title` is almost always empty
-        "type": _as_text(rec.get("type")),
-        "is_template": _as_text(rec.get("isTemplate")),
-        "is_harvested": _as_text(rec.get("isHarvested")),
-        "is_public": info.get("isPublishedToAll", ""),
-        "source": info.get("source", ""),
-        "owner_id": _as_text(rec.get("owner")),
-        "owner_username": user[0],
-        "owner_profile": user[3] if len(user) > 3 else "",
-        "group_owner": _as_text(rec.get("groupOwner")),
-        "published_for_group": _as_text(rec.get("publishedForGroup")),
-        "category": _as_text(rec.get("category")),
-        "language": _as_text(rec.get("docLocale")),
-        "standard_name": _as_text(rec.get("standardName")),
-        "valid": _as_text(rec.get("valid")),
-        "create_date": info.get("createDate", ""),
-        "change_date": info.get("changeDate", ""),
-    }
-
-def build_inventory(reader, run_dir):
-    """Inventory of today's metadata records (templates excluded), by pages of 100.
-
-    Saves each page as is in run_dir/inventory/q_<from>-<to>.json and the table in
-    run_dir/inventory.csv (one row per record, columns INVENTORY_COLUMNS). Always requests
-    everything again (7 requests for 659 records): it is the only step that finds new or
-    removed records. The first page also asks for the summary, which gives the total.
-
-    Returns the rows of inventory.csv.
+def build_inventory():
+    """Creates an inventory with the metadata records (templates excluded), by pages of 100. The first loop returns a summary of the total of records.
+    Saves each page as is in /inventory/q_<from>-<to>.json and the full record table in inventory/inventory.csv.
     """
+    summary = []
     first = fetch_resources_page(1)
-    total = q_count(first)
-    records = q_records(first)
-    for start in range(PAGE_SIZE + 1, total + 1, PAGE_SIZE):
-        records += q_records(fetch_resources_page(start))
+    total = summary_count(first)
+    records = extract_metadata(first)
 
-    rows = [inventory_row(rec) for rec in records]
-    if len({r["uuid"] for r in rows}) != total:
-        # a record created or deleted while paging shifts the pages: start the run again
-        raise RuntimeError(f"q service: {total} records announced, {len(rows)} received "
-                           f"({len({r['uuid'] for r in rows})} distinct UUIDs)")
-    rows.sort(key=lambda r: r["uuid"])
-    write_csv(rows, run_dir / "inventory.csv", fieldnames=INVENTORY_COLUMNS)
-    return rows
+    logger.info(f"The total of records found in Geonetwork is {total}")
+
+    record_files = []
+    for start in range(PAGE_SIZE + 1, total + 1, PAGE_SIZE):
+        logger.info(f"Retrieving record's metadata from {start} to {start + PAGE_SIZE}")
+        records += extract_metadata(fetch_resources_page(start))
+
+    for r in records:
+        data, files = inventory_row(r)
+        summary.append(data)
+        record_files.append(files)
+    
+    # Extracts all the uniques uuid values
+    uuid_len = len({r["uuid"] for r in summary})
+    logger.info(f"Found {uuid_len} unique UUIDs")
+    if uuid_len != total:
+        raise RuntimeError(f"An error occured! {total} records announced, but got {uuid_len} unique UUIDs instead. Please, run the script again.")
+    
+    summary.sort(key=lambda r: r["uuid"])
+    write_csv(summary, Path(config.gn_data_dir) / "inventory", "inventory.csv")
+    write_csv(record_files, Path(config.gn_data_dir) / "inventory", "files_inventory.csv")
+    
+    return summary
+
+def fetch_record_xml(u):
+    try:
+        record = api_call(f"/api/records/{u}/formatters/xml", accept="application/xml", increasePopularity="false")
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 400:
+            logger.warning(f"An error occured while fetching the endpoint formatters/xml. Fetching raw XML for {u}")
+            print(f"An error occured but im handling it {e}")
+            url_raw = f"/api/records/{u}"
+            record = api_call(url_raw, accept="application/xml")
+        else:
+            raise
+    content = record.content.strip()
+    if b"MD_Metadata" not in content[:2000] and not content.startswith(b"<?xml"):
+        raise ValueError(f"Record {u}: la respuesta no es un documento XML válido")
+    
+    return record
+
+def fetch_record_attachements(u):
+    record = api_call(f"/api/records/{u}/attachments")
+    record.raise_for_status()
+    try:
+        record.json()
+    except ValueError as e:
+        raise ValueError(f"Record {u}: invalid JSON in attachments response: {e}")
+    return record
+
+def fetch_record_sharing(u):
+    record = api_call(f"/api/records/{u}/sharing")
+    record.raise_for_status()
+    try:
+        record.json()
+    except ValueError as e:
+        raise ValueError(f"Record {u}: invalid JSON in sharing response: {e}")
+    return record
+
+def harvest_single_uuid(uuid, steps):
+    """Fetches and saves metadata XML, a json for file references and a json for resource groups and privileges."""
+    uuid_errors = []
+    for step_name, fetch_func in steps:
+        base_path = Path(config.gn_data_dir) / step_name
+        file_path = base_path / f"{uuid}.json"
+
+        if file_path.exists():
+            continue
+
+        try:
+            r = fetch_func(uuid)
+            if step_name == 'xml':
+                write_json(xmltodict.parse(r.content), base_path, f"{uuid}.json")
+            else:
+                write_bytes(r.content, base_path, f"{uuid}.json")
+        except (requests.RequestException, ValueError, OSError) as e:
+            uuid_errors.append(f"Error en {step_name} para UUID {uuid}: {e}")
+
+    return uuid_errors
+
+def harvest_records(uuids):
+    """Runs harvest_single_uuid for all resources available."""
+    errors = []
+
+    steps = [
+        ("xml", fetch_record_xml),
+        ("attachments", fetch_record_attachements),
+        ("sharing", fetch_record_sharing),
+    ]
+
+    uuids = uuids[:150]
+    total=len(uuids)
+
+    start_time = time.perf_counter()
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        future_to_uuid = {
+            executor.submit(harvest_single_uuid, uuid, steps): uuid
+            for uuid in uuids
+        }
+
+        completed = 0
+        for future in as_completed(future_to_uuid):
+            completed += 1
+            uuid_errors = future.result()
+            if uuid_errors:
+                errors.extend(uuid_errors)
+
+            if completed % 25 == 0 or completed == total:
+                elapsed = time.perf_counter() - start_time
+                logger.info(f"Progreso: {completed}/{total} registros procesados ({len(errors)} errores) - {elapsed:.1f}s transcurridos")
+
+    logger.info(f"Fetching of {total} resources is now finished.")
+    return errors
 
 def main():
-    gn_version = harvest_server()
-    print("What does gn_version returns?? I dont know! Is it worth saving it?", gn_version)
+    try:
+        harvest_server()
 
-    rows = build_inventory(reader, run_dir)
-    uuids = [r["uuid"] for r in rows]
+        rows = build_inventory()
+        uuids = [r["uuid"] for r in rows]
+        errors = harvest_records(uuids)
+        for e in errors:
+            logger.error(e)
+
+        logger.info("Harvesting succesfully finished!")
+    except Exception as e:
+        logger.exception("An error occured while harvesting the Geonetwork server. Aborting.")
 
 
 if __name__ == "__main__":
