@@ -17,3 +17,6 @@ class Config:
         self.api_origin = NativeApi(self.dv_origin_url, self.dv_origin_api_token)
 
         self.gn_origin_url = os.getenv('GN_URL')
+        self.gn_user = os.getenv('GN_USER')
+        self.gn_password = os.getenv('GN_PASSWORD')
+        self.gn_data_dir = os.getenv('GN_DATA_DIR')
