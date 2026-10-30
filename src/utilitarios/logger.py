@@ -1,11 +1,17 @@
 import logging
 import sys
-import os
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-def get_logger(name=__name__, log_dir="logs", log_file="catalog_integration.log"):
-    os.makedirs(log_dir, exist_ok=True)
-    log_path=os.path.join(log_dir, log_file)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+def get_logger(name=__name__, log_dir=None, log_file="catalog_integration.log"):
+    if log_dir is None:
+        log_path = BASE_DIR / "src" / "logs" / log_file
+    else:
+        log_path = Path(log_dir) / log_file
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
