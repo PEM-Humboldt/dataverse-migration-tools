@@ -29,5 +29,3 @@ def api_call(path, accept="application/json", **params):
 
     response.raise_for_status()
     return response
-   
-    response.raise_for_status()
