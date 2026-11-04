@@ -1,61 +1,44 @@
 import json
-from pathlib import Path
-
 import requests
+from pathlib import Path
 from src.formato.biocultural_format import extract_pid_identifier
 from src.utilitarios.files import read_csv, load_json_metadata
+from src.utilitarios import logger
 from src.config import Config
 
 config = Config()
 
-def load():
-    datasets = read_csv(Path(config.dv_data_dir) / "inventory.csv")
-    for d in datasets:
-        pid = d['persistent_id']
-        identifier = extract_pid_identifier(pid)
+def load(pid, identifier):    
 
-        files_metadata = (Path(config.dv_data_dir)/config.metadata_dir).glob(f"{identifier}-*.json")
+    metadata_files = (Path(config.dv_data_dir)/config.metadata_dir).glob(f"{identifier}-*.json")
 
-        for file in files_metadata:
+    for file in metadata_files:
+        version_folder = file.stem
 
-            version_folder = file.stem
-            versions_files_path = Path(config.dv_data_dir) / config.files_dir / version_folder
+        # Checks if folder [DOI]-[VERSION] exists
+        versions_files_path = Path(config.dv_data_dir) / config.files_dir / version_folder
+        if not versions_files_path.exists():
+            print(f"No existe la carpeta: {versions_files_path}")
+            continue
 
-            if not versions_files_path.exists():
-                print(f"No existe la carpeta: {versions_files_path}")
+        metadata = load_json_metadata(Path(config.dv_data_dir)/config.metadata_dir, file.name)
+
+        for file_metadata in metadata.get("datasetVersion").get("files", []):
+            data_file = file_metadata["dataFile"]
+
+            # Checks if file exists
+            file_path = versions_files_path / data_file['filename']
+            if not file_path.exists():
+                print(f"No existe el archivo {file_path}")
                 continue
 
-            json = load_json_metadata(Path(config.dv_data_dir)/config.metadata_dir, file.name)
+            storage_id = direct_upload(pid, data_file['filesize'], file_path)
+            generate_json_data(pid, file_metadata, storage_id)
 
-            for file_metadata in json.get("datasetVersion").get("files", []):
-                data_file = file_metadata["dataFile"]
-
-                file_path = versions_files_path / data_file['filename']
-
-                if not file_path.exists():
-                    print(f"No existe el archivo {file_path}")
-                    continue
-
-                file_data = {
-                    'pid': pid,
-                    'version': version_folder,
-                    'label': file_path.name,
-                    'id': data_file['id'],
-                    'checksum': data_file['checksum']['value'],
-                    'size': data_file['filesize']
-                }
-                print("=========================================================")
-                print(file_data)
-
-                storage_id = direct_upload(file_data, file_path)
-                generate_json_data(pid, file_metadata, storage_id)
-
-def direct_upload(data, file_path):
-    pid = data['pid']
-    size = data['size']
-
+def direct_upload(pid, size, file_path):
     api_url = f"/api/datasets/:persistentId/uploadurls"
-    url = config.dv_target_url + api_url 
+    url = config.dv_target_url + api_url
+
     params = {
         "persistentId": pid,
         "size": size
@@ -74,39 +57,33 @@ def direct_upload(data, file_path):
     response_data = r["data"]
     data_storage_identifier = response_data.get('storageIdentifier')
 
-    # Obtener todas las URLs
+    # Collects all the URLs
     if "url" in response_data:
         urls = {"1": response_data["url"]}
     else:
         urls = response_data["urls"]
-    print("OBTUVE LAS URLS!!!!!!!!!!!!!!!!!! V", urls)
 
     if len(urls) > 1:
         etags = {}
         part_size = response_data["partSize"]
 
-        for part_number, url in urls.items():
-
-            chunk = file.read(part_size)
-            response = requests.put(
-                        url=url,
-                        data=chunk,
-                        headers={"x-amz-tagging": "dv-state=temp"},
-                    )
-            if response.status_code != 200:
-                raise RuntimeError(
-                    f"Error subiendo archivo a S3: {response.status_code} - {response.text}"
+        with open(file_path, "rb") as file:
+            for part_number, url in urls.items():
+                chunk = file.read(part_size)
+                response = requests.put(
+                    url=url,
+                    data=chunk,
+                    headers={"x-amz-tagging": "dv-state=temp"},
                 )
-            
-            print("Status:", response.status_code)
-            print("Headers:", response.headers)
-            print("Body:", response.text)
-            
-            etag = response.headers.get("ETag")
 
-            if not etag:
-                raise RuntimeError(f"No se recibió ETag para la parte {part_number}")
-            etags[part_number] = etag
+                if response.status_code != 200:
+                    raise RuntimeError(f"Error subiendo archivo a S3: {response.status_code} - {response.text}")
+                
+                etag = response.headers.get("ETag")
+                if not etag:
+                    raise RuntimeError(f"No se recibió ETag para la parte {part_number}")
+                
+                etags[part_number] = etag
 
         response = requests.put(
             config.dv_target_url + response_data["complete"],
@@ -129,18 +106,11 @@ def direct_upload(data, file_path):
             )
 
             if response.status_code != 200:
-                raise RuntimeError(
-                    f"Error subiendo archivo a S3: {response.status_code} - {response.text}"
-                )
-
-            print("Status:", response.status_code)
-            print("Headers:", response.headers)
-            print("Body:", response.text)
+                raise RuntimeError(f"Error subiendo archivo a S3: {response.status_code} - {response.text}")
 
     return data_storage_identifier
 
 def generate_json_data(pid, data, storage_id):
-    print(data)
     json_data = {
         'description': data.get('description', ""),
         'categories':data.get('categories', []), 
@@ -153,9 +123,11 @@ def generate_json_data(pid, data, storage_id):
 
     api_url = "/api/datasets/:persistentId/add"
     url = config.dv_target_url + api_url
+
     params = {
         "persistentId": pid
     }
+
     r = requests.post(
         files={
         "jsonData": (None, json.dumps(json_data))
@@ -164,12 +136,23 @@ def generate_json_data(pid, data, storage_id):
         params=params,
         headers={"X-Dataverse-key": config.dv_target_api_token},
     )
-
-    print("MY FINAL RESPONSE IS ====>>>>>>>>>>>>>>>>>>>>>>>")
-    print(r.json())
+    if r.status_code != 200:
+        raise RuntimeError(f"Error subiendo archivo a S3: {r.status_code} - {r.text}")
+    
     
 def main():
-    load()
+    try:
+        datasets = read_csv(Path(config.dv_data_dir) / "inventory.csv")
+
+        for d in datasets:
+            pid = d['persistent_id']
+            identifier = extract_pid_identifier(pid)
+            
+            load(pid, identifier)
+
+            logger.info(f"Files correctly uploaded for dataset with PID {pid}")
+    except Exception as e:
+        logger.error("An error occured while saving the files.")
 
 if __name__ == '__main__':
     main()
