@@ -109,12 +109,14 @@ def download_version_files(file_id, label, extension, pid, current_v):
     """
     api_url = f"/api/access/datafile/{file_id}"
     
-    url = config.dv_origin_url + api_url 
+    url = config.dv_origin_url + api_url
+
+    params = {'format': 'original'}
 
     response = requests.get(
         url=url,
         headers={"X-Dataverse-key": config.dv_origin_api_token},
-        #params=params,
+        params=params,
         stream=True,
         allow_redirects=True
     )
