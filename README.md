@@ -60,8 +60,16 @@ Para obtener todos los metadatos y archivos de los datasets de BioCultural ejecu
 python3 -m src.ingest.biocultural_ingest
 ```
 
-Los metadatos se almacenarán en la ruta establecida en el atributo `metadata_directory` del [config.json](/src/config.json). Si se mantiene la ruta definida, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
+Los metadatos se almacenarán en la ruta establecida en el atributo `BIOCULTURAL_DATA_DIR/METADATA_DIR` del [.env](.env.example). Si se mantiene la ruta por defecto, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
 Los archivos se almacenarán en la ruta establecida en el atributo `files_directory` del [config.json](/src/config.json), dentro de una subcarpeta para cada DOI. Si se mantiene la ruta definida, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
+
+La estructura final se verá así:
+- Carpeta `collections`: Almacena un json de cada uno de los dataversos existentes con información sobre sus datasets y dataversos hijos.
+- Carpeta `files`: Almacena los archivos de cada versión de cada dataset en subcarpetas nombradas como [IDENTIFICADOR_DOI]-[VERSIÓN]
+- Carpeta `metadatablocks`: Almacena un json por cada bloque de metadatos existente en la instancia.
+- Carpeta `raw`: Almacena los metadatos de cada versión de cada dataset en jsons nombrados como [IDENTIFICADOR_DOI]-[VERSIÓN].json
+- Archio `inventory.csv`: Genera un inventario de todos los datasets presentes en la instancia.
+- Arcivo `version.json`: Almacena un resumen de la versión de la instancia de BioCultural.
 
 ## Logs
 Podrá encontrar los archivos de logs en la carpeta [logs](/src/logs/).
