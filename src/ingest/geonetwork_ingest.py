@@ -1,5 +1,4 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
 from pathlib import Path
 import time
 import xmltodict
@@ -81,8 +80,7 @@ def fetch_record_xml(u):
         record = api_call(f"/api/records/{u}/formatters/xml", accept="application/xml", increasePopularity="false")
     except requests.HTTPError as e:
         if e.response is not None and e.response.status_code == 400:
-            logger.warning(f"An error occured while fetching the endpoint formatters/xml. Fetching raw XML for {u}")
-            print(f"An error occured but im handling it {e}")
+            logger.warning(f"Unable to download formatted XML. Fetching raw XML instead for {u}.")
             url_raw = f"/api/records/{u}"
             record = api_call(url_raw, accept="application/xml")
         else:
