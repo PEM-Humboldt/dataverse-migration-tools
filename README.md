@@ -81,6 +81,7 @@ Para obtener todos los metadatos y archivos de los datasets de Ceiba ejecute el 
 ```sh
 python3 -m src.ingest.ceiba_ingest
 ```
+Los metadatos se almacenarán en la ruta establecida en el atributo `CEIBA_DATA_DIR/METADATA_DIR` del [.env](.env.example). Si se mantiene la ruta por defecto, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
 
 Se creará una carpeta para cada recurso, donde dentro se almacenará:
 - `files.json` para la ruta absoluta de los archivos del recurso.
