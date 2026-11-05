@@ -140,7 +140,7 @@ def harvest_records(uuids):
         ("sharing", fetch_record_sharing),
     ]
 
-    uuids = uuids[:150]
+    #uuids = uuids[:150]
     total=len(uuids)
 
     start_time = time.perf_counter()
