@@ -101,11 +101,13 @@ python3 -m src.ingest.geonetwork_ingest
 
 > Nota: Tenga presente que GeoNetwork maneja más de 6000 recursos. La ejecución completa del script puede tomar varios minutos. Si desea hacer una prueba controlada, puede descomentar la línea 143 del script `geonetwork_ingest.py`
 
-Se generará la siguiente estructura:
-- **attachements**: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se referencian los archivos adjuntos, con su url, tamaño y tipo de adjunto.
-- **inventory**: Contiene un archivo de inventario de archivos para todos los recursos (`files_inventory.csv`), un inventario de metadatos generales (`inventory.csv`) y un resumen de todos los recursos (+6000) separándolos en varios archivos, cada uno conteniendo lotes de 100.
-- **sharing**: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se referencian los privilegios de cada recurso.
-- **xml**: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se almacenan los metadatos completos de cada recurso.
+Los datos se almacenarán en la ruta `GN_DATA_DIR` del [.env](.env.example). Si se mantiene la ruta por defecto, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
+
+La estructura final se verá así:
+- Carpeta `attachements`: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se referencian los archivos adjuntos, con su url, tamaño y tipo de adjunto.
+- Carpeta `inventory`: Contiene un archivo de inventario de archivos para todos los recursos (`files_inventory.csv`), un inventario de metadatos generales (`inventory.csv`) y un resumen de todos los recursos separándolos en varios archivos, cada uno conteniendo lotes de 100.
+- Carpeta `sharing`: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se referencian los privilegios de cada recurso.
+- Carpeta `xml`: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se almacenan los metadatos completos de cada recurso.
 - `groups.json`: Grupos de GeoNetwork
 - `site.json`: Información de la instancia de GeoNetwork
 
