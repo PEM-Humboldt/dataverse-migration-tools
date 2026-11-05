@@ -42,10 +42,6 @@ def write_csv(rows, path, filename, fieldnames=None):
     except Exception as e:
         raise RuntimeError(f"An error occured while writing the CSV in {raw_dirpath}") from e
 
-def read_csv(path):
-    """Read a UTF-8 CSV file with a header row; return a list of dictionaries."""
-    return list(csv.DictReader(io.StringIO(Path(path).read_text(encoding="utf-8"))))
-
 def save_file_as_stream(response, file_directory, folder_name, filename):
     try:
         raw_dir = BASE_DIR / file_directory / folder_name
