@@ -68,5 +68,15 @@ python3 -m src.ingest.biocultural_ingest
 Los metadatos se almacenarán en la ruta establecida en el atributo `metadata_directory` del [config.json](/src/config.json). Si se mantiene la ruta definida, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
 Los archivos se almacenarán en la ruta establecida en el atributo `files_directory` del [config.json](/src/config.json), dentro de una subcarpeta para cada DOI. Si se mantiene la ruta definida, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
 
+### Ceiba
+Para obtener todos los metadatos y archivos de los datasets de Ceiba ejecute el script [ceiba_ingest.py](/src/ingest/ceiba_ingest.py):
+```sh
+python3 -m src.ingest.ceiba_ingest
+```
+
+Se creará una carpeta para cada recurso, donde dentro se almacenará:
+- `files.json` para la ruta absoluta de los archivos del recurso.
+- `resource_metadata.json` que contiene la data del `eml.xml` de la última versión disponible, unido con la data almacenada en `resources.xml`.
+
 ## Logs
 Podrá encontrar los archivos de logs en la carpeta [logs](/src/logs/).
