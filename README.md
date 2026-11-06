@@ -43,6 +43,12 @@ Se tiene un archivo de variables de ambiente [.env.example](/.env.example):
     BIOCULTURAL_ORIGIN_API_TOKEN="" # Token de usuario administrador de instancia de BioCultural de origen
     BIOCULTURAL_DATA_DIR="" # Ruta relativa donde se almacenarán los datos de biocultural
 
+    # Geonetwork
+    GN_URL=https://geonetwork.humboldt.org.co/geonetwork/srv
+    GN_USER= # Nombre de usuario administrador
+    GN_PASSWORD= # Contraseña de usuario administrador
+    GN_DATA_DIR="" # Ruta relativa donde se almacenarán los datos de Geonetwork
+
     METADATA_DIR="raw" # Nombre de la carpeta donde se almacenarán los metadatos
     FILES_DIR="files"  # Nombre de la carpeta donde se almacenarán los archivos
 ```
@@ -70,6 +76,24 @@ La estructura final se verá así:
 - Carpeta `raw`: Almacena los metadatos de cada versión de cada dataset en jsons nombrados como [IDENTIFICADOR_DOI]-[VERSIÓN].json
 - Archio `inventory.csv`: Genera un inventario de todos los datasets presentes en la instancia.
 - Arcivo `version.json`: Almacena un resumen de la versión de la instancia de BioCultural.
+
+### GeoNetwork
+Para obtener todos los metadatos y las referencias de los archivos adjuntos a cada uno de los recursos de GeoNetwork, ejecute el script [geonetwork_ingest.py](/src/ingest/geonetwork_ingest.py):
+```sh
+python3 -m src.ingest.geonetwork_ingest
+```
+
+> Nota: Tenga presente que GeoNetwork maneja más de 6000 recursos. La ejecución completa del script puede tomar varios minutos. Si desea hacer una prueba controlada, puede descomentar la línea 143 del script `geonetwork_ingest.py`
+
+Los datos se almacenarán en la ruta `GN_DATA_DIR` del [.env](.env.example). Si se mantiene la ruta por defecto, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
+
+La estructura final se verá así:
+- Carpeta `attachements`: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se referencian los archivos adjuntos, con su url, tamaño y tipo de adjunto.
+- Carpeta `inventory`: Contiene un archivo de inventario de archivos para todos los recursos (`files_inventory.csv`), un inventario de metadatos generales (`inventory.csv`) y un resumen de todos los recursos separándolos en varios archivos, cada uno conteniendo lotes de 100.
+- Carpeta `sharing`: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se referencian los privilegios de cada recurso.
+- Carpeta `xml`: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se almacenan los metadatos completos de cada recurso.
+- `groups.json`: Grupos de GeoNetwork
+- `site.json`: Información de la instancia de GeoNetwork
 
 ## Logs
 Podrá encontrar los archivos de logs en la carpeta [logs](/src/logs/).
