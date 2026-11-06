@@ -88,20 +88,29 @@ def fetch_dataset_versions(dataset):
 
         format_version_record(version, filename)
 
-        download_version_files(pid, current_v)
+        extract_files_data(version, pid, current_v)
+
+        #download_version_files(pid, current_v)
 
     logger.info(f"For dataset {pid}, {len(versions)} version(s) succesfully downloaded.")
 
-def download_version_files(pid, current_v):
+def extract_files_data(data, pid, version):
+    files = data['files']
+    for f in files:
+        file_id = f['dataFile']['id']
+        label = f['label']
+        file_name = label[:label.rindex('.')]
+        extension = label[label.rindex('.')+1:]
+        download_version_files(file_id, file_name, extension, pid, version)
+
+def download_version_files(file_id, label, extension, pid, current_v):
     """
-    Makes an API call to download all files from version in a ZIP and saves them to disk
+    Downloads a single file by ID an saves it to disk
     """
-    version = ':draft' if current_v == 'DRAFT' else current_v
-    api_url = f"/api/access/dataset/:persistentId/versions/{version}"
+    api_url = f"/api/access/datafile/{file_id}"
     url = config.dv_origin_url + api_url 
 
     params = {
-        "persistentId": pid,
         "format": "original"
     }
 
@@ -110,15 +119,16 @@ def download_version_files(pid, current_v):
         headers={"X-Dataverse-key": config.dv_origin_api_token},
         params=params,
         stream=True,
-        allow_redirects=True
-    )
+        allow_redirects=True,
+        timeout=60
+    )        
 
     identifier = extract_pid_identifier(pid)
     folder_name = f"{identifier}-{current_v}"
 
     if response.status_code == 200:
         files_path = Path(config.dv_data_dir)/Path(config.files_dir)
-        save_file_as_stream(response, files_path, folder_name, "files.zip")
+        save_file_as_stream(response, files_path, folder_name, f"{label}.{extension}")
     else:
         api_message = response.json().get("message", "No details available")
         raise RuntimeError(f"Error while fetching the files for {pid}, response is {response.status_code} - {api_message}")
