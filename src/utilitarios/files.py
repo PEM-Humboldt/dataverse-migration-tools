@@ -40,14 +40,25 @@ def save_file_as_stream(response, file_directory, folder_name, filename):
     try:
         raw_dir = BASE_DIR / file_directory / folder_name
         raw_dir.mkdir(parents=True, exist_ok=True)
-        zip_filepath = raw_dir / filename
 
-        with open(zip_filepath, 'wb') as f:
+        final_filepath = raw_dir / filename
+        part_filepath = raw_dir / f"{filename}.part"
+
+        with open(part_filepath, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     f.write(chunk)
+
+        if part_filepath.stat().st_size == 0:
+            raise IOError("File downloaded is 0 bytes.")
+
+        part_filepath.replace(final_filepath)
+
     except Exception as e:
-        raise IOError(f"An error ocurred while saving the ZIP in {zip_filepath}") from e
+        if part_filepath.exists():
+            part_filepath.unlink()
+
+        raise IOError(f"An error ocurred while saving the ZIP in {final_filepath}") from e
 
 def load_json_metadata(file_directory, filename):
     file = BASE_DIR / file_directory / filename
