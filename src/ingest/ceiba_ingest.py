@@ -7,7 +7,7 @@ from src.formato.ceiba_format import xml_to_dict, attach_inventory_data
 from src.utilitarios.logger import logger
 
 config = Config()
-EML_PATTERN = re.compile(r"^eml(?:-(\d+)(?:\.(\d+))?)?\.xml$")
+EML_PATTERN = re.compile(r"^eml-(\d+)(?:\.(\d+))?\.xml$")
 OUTPUT_DIR = f"{config.ceiba_data_dir}/{config.metadata_dir}"
 
 
@@ -41,7 +41,7 @@ def get_latest_eml(resource_dir):
                 latest_filename = os.path.splitext(file)[0]
 
     if latest_filename is None:
-        logger.warning(f"No EML file was found for the {resource_dir.name} resource")
+        logger.warning(f"No published EML file was found for the {resource_dir.name} resource")
 
     return latest_filename
     
@@ -49,34 +49,34 @@ def export_file_references(resource_dir, version = None):
     """Gets files absolute paths and saves them in a dictionary"""
 
     files_directory = {}
+    suffix = f"-{version}" if version is not None else ""
 
-    if version is not None:
-        files_directory['zip_filepath'] = f"{resource_dir}/dwca-{version}.zip"
-        files_directory['rtf_filepath'] = f"{resource_dir}/{resource_dir.name}-{version}.rtf"
-        
-    else:
-        files_directory['zip_filepath'] = f"{resource_dir}/dwca.zip"
-        files_directory['rtf_filepath'] = f"{resource_dir}/{resource_dir.name}.rtf"
+    zip_path = resource_dir / f"dwca{suffix}.zip"
+    rtf_file = resource_dir / f"{resource_dir.name}{suffix}.rtf"
 
+    files_directory['zip_filepath'] = str(zip_path) if zip_path.exists() else ""
+    files_directory['rtf_filepath'] = str(rtf_file) if rtf_file.exists() else ""
+    
     sources_dir = resource_dir / "sources"
 
     if sources_dir.exists() and sources_dir.is_dir():
         for file in os.listdir(sources_dir):
-            if str(file).endswith(".txt"):
-                files_directory[file] = f"{resource_dir}/{file}"
+            if not str(file).endswith(".log"):
+                files_directory[file] = f"{sources_dir}/{file}"
 
     write_json(files_directory, f"{OUTPUT_DIR}/{resource_dir.name}", 'files.json')
-
-
 
 def process_metadata(resource_dir):
     """Transform XML files and inventory record to python dicts to merge them all into a single JSON file
     """
     eml_file = get_latest_eml(resource_dir)
+    published = eml_file is not None
+    latest_version = eml_file.split("-")[1] if published else None
 
-    latest_version = eml_file.split("-")[1] if eml_file and "-" in eml_file else None
-    files = ["resource"] if eml_file is None else ["resource", eml_file]
-    
+    if not published:
+        logger.info(f"{resource_dir.name}: never published, only resource.xml is read")
+    files = ["resource", eml_file] if published else ["resource"]
+
     resource_dictionary = {}
     for f in files:
         filepath = resource_dir / f"{f}.xml"
@@ -89,7 +89,7 @@ def process_metadata(resource_dir):
         resource_dictionary = resource_dictionary | data_dict
 
     return {
-        'resource_dict': resource_dictionary,
+        'resource_dict': resource_dictionary | {"published": published},
         'latest_version': latest_version,
         'ceiba_identifier': resource_dir.name
     }

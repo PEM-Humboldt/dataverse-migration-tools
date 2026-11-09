@@ -1,6 +1,8 @@
 import xmltodict
 import re
 
+from utilitarios import logger
+
 def xml_to_dict(filepath):
     with open(filepath, 'r', encoding="UTF-8") as xml_file:
         return xmltodict.parse(xml_file.read())
@@ -16,9 +18,12 @@ def attach_inventory_data(inventory, resource_dict, identifier):
     target_row = {}
     for row in inventory:
         url = row.get('URL CEIBA')
-        if url.startswith(("http://", "https://")):
+        if url.strip().lower().startswith(("http://", "https://")):
             extracted_name = extract_resource_name(url)
             if extracted_name == identifier:
                 target_row = row
                 break
+
+    if not target_row:
+        logger.warning(f"No se encontró coincidencia en el inventario para el recurso: {identifier}")
     return resource_dict | {"inventory": target_row}
