@@ -1,5 +1,5 @@
 from src.config import Config
-from src.utilitarios.files import read_csv, write_json
+from src.utilitarios.files import read_csv, write_csv, write_json
 import os
 import re
 from pathlib import Path
@@ -104,6 +104,7 @@ def main():
     fails = 0
 
     inventory = read_csv(config.ceiba_inventory)
+    inventory_mapping = []
     for r in resources:
         try:
             data = process_metadata(r)
@@ -112,12 +113,13 @@ def main():
             write_json(full_dict, f"{OUTPUT_DIR}/{r.name}", "resource_metadata.json")
 
             export_file_references(r, data['latest_version'])
-
+            inventory_mapping.append({'resource': r.name, 'latest_version': data['latest_version']})
             successes+=1 
         except Exception as e:
             logger.exception(f"Failed to process resource {r} - ERROR")
             fails += 1
 
+    write_csv(inventory_mapping, Path(config.ceiba_data_dir), 'inventory.csv')
     logger.info(f"Ceiba ingest finished - Number of SUCCESS: {successes} | Number of FAILS: {fails}")
 
 if __name__ == '__main__':
