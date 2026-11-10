@@ -73,8 +73,8 @@ La estructura final se verá así:
 - Carpeta `files`: Almacena los archivos de cada versión de cada dataset en subcarpetas nombradas como [IDENTIFICADOR_DOI]-[VERSIÓN]
 - Carpeta `metadatablocks`: Almacena un json por cada bloque de metadatos existente en la instancia.
 - Carpeta `raw`: Almacena los metadatos de cada versión de cada dataset en jsons nombrados como [IDENTIFICADOR_DOI]-[VERSIÓN].json
-- Archio `inventory.csv`: Genera un inventario de todos los datasets presentes en la instancia.
-- Arcivo `version.json`: Almacena un resumen de la versión de la instancia de BioCultural.
+- Archivo `inventory.csv`: Genera un inventario de todos los datasets presentes en la instancia.
+- Archivo `version.json`: Almacena un resumen de la versión de la instancia de BioCultural.
 
 ### Ceiba
 Para obtener todos los metadatos y archivos de los datasets de Ceiba ejecute el script [ceiba_ingest.py](/src/ingest/ceiba_ingest.py):
