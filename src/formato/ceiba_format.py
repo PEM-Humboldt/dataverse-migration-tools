@@ -5,12 +5,14 @@ import re
 from src.utilitarios.logger import logger
 from src.utilitarios.files import read_xlsx
 
+RESOURCE_PATTERN_NAME = re.compile(r"[?&]r=([^&]+)")
+
 def xml_to_dict(filepath):
     with open(filepath, 'r', encoding="UTF-8") as xml_file:
         return xmltodict.parse(xml_file.read())
 
 def extract_resource_name(url):
-    regex = re.compile(r"[?&]r=([^&]+)")
+    regex = RESOURCE_PATTERN_NAME
     match = regex.search(url)
     return match.group(1) if match else ""
 
