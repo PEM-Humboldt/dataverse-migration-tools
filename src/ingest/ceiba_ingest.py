@@ -1,9 +1,9 @@
 from src.config import Config
-from src.utilitarios.files import read_csv, write_csv, write_json
+from src.utilitarios.files import read_csv, read_xlsx, write_csv, write_json
 import os
 import re
 from pathlib import Path
-from src.formato.ceiba_format import xml_to_dict, attach_inventory_data
+from src.formato.ceiba_format import map_full_inventory, xml_to_dict, attach_inventory_data
 from src.utilitarios.logger import logger
 
 config = Config()
@@ -103,13 +103,14 @@ def main():
     successes = 0
     fails = 0
 
-    inventory = read_csv(config.ceiba_inventory)
+    full_index = map_full_inventory(config.ceiba_inventory)
+
     inventory_mapping = []
     for r in resources:
         try:
             data = process_metadata(r)
 
-            full_dict = attach_inventory_data(inventory, data['resource_dict'], data['ceiba_identifier'])
+            full_dict = attach_inventory_data(full_index, data['resource_dict'], data['ceiba_identifier'])
             write_json(full_dict, f"{OUTPUT_DIR}/{r.name}", "resource_metadata.json")
 
             export_file_references(r, data['latest_version'])

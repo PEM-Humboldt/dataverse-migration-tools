@@ -2,6 +2,7 @@ import json
 import csv
 import io
 from pathlib import Path
+import openpyxl
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -19,7 +20,7 @@ def write_json(data, path, filename):
         raw_filepath = raw_dirpath / filename
 
         with open(raw_filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(data, f, ensure_ascii=False, indent=2, default=str)
     except Exception as e:
         raise RuntimeError(f"An error ocurred while saving the JSON file in {raw_filepath}") from e
 
@@ -65,3 +66,20 @@ def save_file_as_stream(response, file_directory, folder_name, filename):
             part_filepath.unlink()
 
         raise IOError(f"An error ocurred while saving the ZIP in {final_filepath}") from e
+    
+def read_xlsx(wb, sheet_name):
+    """Reads an Excel's sheet of a file"""
+    
+    if sheet_name not in wb.sheetnames:
+        raise ValueError(f"La hoja {sheet_name} no existe.")
+        
+    sheet = wb[sheet_name]
+    
+    headers = [cell.value for cell in sheet[1]]
+    
+    rows = []
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        if any(row):
+            rows.append(dict(zip(headers, row)))
+            
+    return rows
