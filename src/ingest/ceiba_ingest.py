@@ -10,7 +10,6 @@ config = Config()
 EML_PATTERN = re.compile(r"^eml-(\d+)(?:\.(\d+))?\.xml$")
 OUTPUT_DIR = f"{config.ceiba_data_dir}/{config.metadata_dir}"
 
-
 def read_resources():
     """Returns the path for each existing resource"""
     base_path = Path(config.ceiba_origin_path)

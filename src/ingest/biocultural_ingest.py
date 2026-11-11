@@ -1,9 +1,11 @@
 from pathlib import Path
+
+import openpyxl
 from src.config import Config
 import requests
 from src.formato.biocultural_format import extract_dataset_pids, extract_pid_identifier, extract_dataset_version, format_version_record
 from src.utilitarios.logger import logger
-from src.utilitarios.files import write_json, save_file_as_stream, write_csv
+from src.utilitarios.files import read_xlsx, write_json, save_file_as_stream, write_csv
 
 config = Config()
 
@@ -149,6 +151,9 @@ def main():
     all_datasets = []
     collections_dir = Path(config.dv_data_dir) / "collections"
 
+    wb = openpyxl.load_workbook(config.i2d_inventory, data_only=True)
+    rows_socioecologico = read_xlsx(wb, "Socioecológico")
+
     for dv in dataverses:
         dv_id = dv['id']
         alias = dv['alias']
@@ -174,6 +179,7 @@ def main():
 
         for dataset in dataset_list:
             pid = dataset.get('persistent_id')
+            print(pid)
             try:
                 fetch_dataset_versions(dataset)
                 successes+=1
