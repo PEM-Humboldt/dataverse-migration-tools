@@ -76,7 +76,7 @@ def direct_upload(pid, size, file_path):
                     headers={"x-amz-tagging": "dv-state=temp"},
                 )
 
-                if response.status_code != 200:
+                if not response.ok:
                     raise RuntimeError(f"Error subiendo archivo a S3: {response.status_code} - {response.text}")
                 
                 etag = response.headers.get("ETag")
@@ -91,7 +91,7 @@ def direct_upload(pid, size, file_path):
             headers={"X-Dataverse-key": config.dv_target_api_token}
         )
 
-        if response.status_code != 200:
+        if not response.ok:
             raise RuntimeError(
                 f"Error completando carga multipart: "
                 f"{response.status_code} - {response.text}"
@@ -105,7 +105,7 @@ def direct_upload(pid, size, file_path):
                 headers={"x-amz-tagging": "dv-state=temp"},
             )
 
-            if response.status_code != 200:
+            if not response.ok:
                 raise RuntimeError(f"Error subiendo archivo a S3: {response.status_code} - {response.text}")
 
     return data_storage_identifier
@@ -136,7 +136,7 @@ def generate_json_data(pid, data, storage_id):
         params=params,
         headers={"X-Dataverse-key": config.dv_target_api_token},
     )
-    if r.status_code != 200:
+    if not r.ok:
         raise RuntimeError(f"Error subiendo archivo a S3: {r.status_code} - {r.text}")
     
     
