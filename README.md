@@ -50,6 +50,10 @@ Se tiene un archivo de variables de ambiente [.env.example](/.env.example):
     INVENTORY_PATH="/ruta/inventario/i2d" # Ruta absoluta al inventario I2D
     METADATA_DIR="raw" # Nombre de la carpeta donde se almacenarán los metadatos
     FILES_DIR="files"  # Nombre de la carpeta donde se almacenarán los archivos
+
+    # Dataverse 6.10.1 Instance
+    DV_TARGET_URL = "http://dataverse.localhost" # URL de la instancia final de Dataverse
+    DV_TARGET_API_TOKEN="" # Token de usuario administrador de instancia final de Dataverse
 ```
 
 Genere su archivo `.env` copiando el `env.example`:
