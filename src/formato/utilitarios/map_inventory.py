@@ -18,7 +18,9 @@ def map_full_inventory(wb):
                 'objeto': row.get('OBJETO'),
                 'nombre_corto': row.get('NOMBRE CORTO'),
                 'fecha_inicio': row.get('FECHA DE INICIO'),
-                'fecha_final': row.get('FECHA FINAL')
+                'fecha_final': row.get('FECHA FINAL'),
+                'nombre_diego': row.get('NOMBRE DIEGO'),
+                'suscrito': row.get('SUSCRITO')
             }
 
     general_index = {}
