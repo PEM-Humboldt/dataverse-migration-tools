@@ -1,15 +1,18 @@
+from pathlib import Path
+import os
+import re
+import xml.etree.ElementTree as ET
 from src.formato.utilitarios.map_inventory import attach_inventory_data
 from src.config import Config
 from src.utilitarios.files import write_csv, write_json
-import os
-import re
-from pathlib import Path
-from src.formato.ceiba_format import map_biologico_inventory, xml_to_dict
+from src.formato.ceiba_format import map_biologico_inventory
 from src.utilitarios.logger import logger
 
 config = Config()
 EML_PATTERN = re.compile(r"^eml-(\d+)(?:\.(\d+))?\.xml$")
 OUTPUT_DIR = f"{config.ceiba_data_dir}/{config.metadata_dir}"
+INLINE_TAGS = {"emphasis", "subscript", "superscript", "i", "b", "u"}
+LIST_TAGS = {"creator", "contact", "keyword", "keywordSet", "personnel", "associatedParty", "taxonClassification", "para"}
 
 def read_resources():
     """Returns the path for each existing resource"""
@@ -85,14 +88,82 @@ def process_metadata(resource_dir):
             logger.warning(f"File for {resource_dir.name} doesn't exist.")
             continue
 
-        data_dict = xml_to_dict(filepath)
-        resource_dictionary = resource_dictionary | data_dict
+        tree = ET.parse(filepath)
+        root = tree.getroot()
+        data_dict = {root.tag: xml_to_dict_tree(root)}
 
+        resource_dictionary = resource_dictionary | data_dict
     return {
         'resource_dict': resource_dictionary | {"published": published},
         'latest_version': latest_version,
         'ceiba_identifier': resource_dir.name
     }
+
+def clean_inline_text(element):
+    return " ".join("".join(element.itertext()).split())
+
+def validate_inline_tags_only(element):
+    """Return True if the element has children, and ALL of them are formatting tags."""
+    hijos = list(element)
+    if not hijos:
+        return False
+
+    # Checks all children for formatting tags, if any has other tags that are not inline, it returns False
+    for desc in element.iter():
+        if desc is element:
+            continue
+        if desc.tag not in INLINE_TAGS:
+            return False
+
+    return True
+
+def xml_to_dict_tree(element):
+    """Turns XML to a dictionary"""
+
+    # If the element has no children, then checks attributes and text only.
+    if len(element) == 0:
+        text = element.text.strip() if element.text else None
+        if not element.attrib:
+            return text
+        res = {f"@{k}": v for k, v in element.attrib.items()}
+        if text:
+            res["#text"] = text
+        return res
+
+    # Checks if the element contains only formatting tags (e.g. <emphasis>) and returns the full text
+    if validate_inline_tags_only(element):
+        return clean_inline_text(element)
+
+    # Keeps the hierarchical tags
+    data = {}
+    if element.attrib:
+        data.update({f"@{k}": v for k, v in element.attrib.items()})
+
+    text_fragments = []
+    if element.text and element.text.strip():
+        text_fragments.append(element.text.strip())
+
+    # Loops over every child tag of current element
+    for child in element:
+        child_val = xml_to_dict_tree(child)
+
+        # If the tag is in LIST_TAGS it sets the data in a list (always)
+        if child.tag in data or child.tag in LIST_TAGS:
+            if child.tag not in data:
+                data[child.tag] = []
+            elif not isinstance(data[child.tag], list):
+                data[child.tag] = [data[child.tag]]
+            data[child.tag].append(child_val)
+        else:
+            data[child.tag] = child_val
+
+        if child.tail and child.tail.strip():
+            text_fragments.append(child.tail.strip())
+
+    if text_fragments:
+        data["#text"] = " ".join(text_fragments)
+
+    return data
 
 def main():
     logger.info("=============== Ingesting Ceiba resources ===============")
