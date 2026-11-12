@@ -1,9 +1,12 @@
 from pathlib import Path
+
+import openpyxl
+from src.formato.utilitarios.map_inventory import attach_inventory_data
 from src.config import Config
 import requests
-from src.formato.biocultural_format import extract_dataset_pids, extract_pid_identifier, extract_dataset_version, format_version_record
+from src.formato.biocultural_format import extract_dataset_pids, extract_pid_identifier, extract_dataset_version, format_version_record, map_sociocultural_inventory
 from src.utilitarios.logger import logger
-from src.utilitarios.files import write_json, save_file_as_stream, write_csv
+from src.utilitarios.files import read_xlsx, write_json, save_file_as_stream, write_csv
 
 config = Config()
 
@@ -63,7 +66,7 @@ def fetch_dataverse_content(alias):
 
     return content
 
-def fetch_dataset_versions(dataset):
+def fetch_dataset_versions(dataset, map):
     """Returns a dictionary for each version and saves it as JSON
     Downloads the files from each version
     """
@@ -86,11 +89,11 @@ def fetch_dataset_versions(dataset):
         current_v = extract_dataset_version(version)
         filename = f"{identifier}-{current_v}.json"
 
-        format_version_record(version, filename)
+        inventory_row = attach_inventory_data(map, pid, 'sociocultural')
+
+        format_version_record(version, filename, inventory_row)
 
         extract_files_data(version, pid, current_v)
-
-        #download_version_files(pid, current_v)
 
     logger.info(f"For dataset {pid}, {len(versions)} version(s) succesfully downloaded.")
 
@@ -149,6 +152,8 @@ def main():
     all_datasets = []
     collections_dir = Path(config.dv_data_dir) / "collections"
 
+    full_index = map_sociocultural_inventory(config.i2d_inventory)
+
     for dv in dataverses:
         dv_id = dv['id']
         alias = dv['alias']
@@ -175,7 +180,7 @@ def main():
         for dataset in dataset_list:
             pid = dataset.get('persistent_id')
             try:
-                fetch_dataset_versions(dataset)
+                fetch_dataset_versions(dataset, full_index)
                 successes+=1
             except Exception as e:
                 fails+=1

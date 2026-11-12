@@ -1,7 +1,10 @@
 from pathlib import Path
+
+import openpyxl
+from src.formato.utilitarios.map_inventory import map_full_inventory
 from src.utilitarios.logger import logger
 from src.config import Config
-from src.utilitarios.files import write_json
+from src.utilitarios.files import read_xlsx, write_json
 
 config = Config()
 
@@ -48,11 +51,42 @@ def extract_dataset_version(metadata):
         v = metadata.get('versionState')
         return v
 
-def format_version_record(version, filename):
+def format_version_record(version, filename, inventory_row):
     version_record = {
         "metadataLanguage": "es", 
-        "datasetVersion": version
+        "datasetVersion": version,
+        "inventory_data": inventory_row
     }
 
     json_path = Path(config.dv_data_dir)/Path(config.metadata_dir)
     write_json(version_record, json_path, filename)
+
+def map_sociocultural_inventory(excel_file):
+    """
+    Fetches sociocultural data from I2D Inventory 
+    """
+    wb = openpyxl.load_workbook(excel_file, data_only=True)
+
+    rows_sociocultural = read_xlsx(wb, "Socioecológico")
+    sociocultural_index = {}
+    
+    for row in rows_sociocultural:
+        url = row.get('URL Dataverse')
+        if url and url.strip().lower().startswith(("http://", "https://")):
+            resource_name = url.split("://")[-1].replace(".org/", ":")
+            sociocultural_index[resource_name] = {
+                'acceso_recurso': row.get('Acceso al recurso'),
+                'fecha_liberacion': row.get('Fecha liberación'),
+                'objeto_restriccion': row.get('Objeto de la restricción'),
+                'proyecto': row.get('Proyecto'),
+                'proyecto_macro': str(row.get('Proyecto Macro')).strip(),
+                'contrato_convenio': row.get('Contrato/Convenio'),
+                'doi': row.get('DOI'),
+                'gbif_key': row.get('GBIF DATASET KEY'),
+                'url': url
+            }
+
+    incoming_index = map_full_inventory(wb)
+    incoming_index['sociocultural'] = sociocultural_index
+
+    return incoming_index

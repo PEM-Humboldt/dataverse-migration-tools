@@ -43,6 +43,11 @@ Se tiene un archivo de variables de ambiente [.env.example](/.env.example):
     BIOCULTURAL_ORIGIN_API_TOKEN="" # Token de usuario administrador de instancia de BioCultural de origen
     BIOCULTURAL_DATA_DIR="" # Ruta relativa donde se almacenarán los datos de biocultural
 
+    # Ceiba
+    CEIBA_ORIGIN_PATH="/ruta/a/carpeta/resources" # Ruta absoluta a la carpeta con los recursos
+    CEIBA_DATA_DIR="data/ceiba" # Ruta relativa donde se almacenarán los datos de Ceiba
+    
+    INVENTORY_PATH="/ruta/inventario/i2d" # Ruta absoluta al inventario I2D
     METADATA_DIR="raw" # Nombre de la carpeta donde se almacenarán los metadatos
     FILES_DIR="files"  # Nombre de la carpeta donde se almacenarán los archivos
 
@@ -72,8 +77,19 @@ La estructura final se verá así:
 - Carpeta `files`: Almacena los archivos de cada versión de cada dataset en subcarpetas nombradas como [IDENTIFICADOR_DOI]-[VERSIÓN]
 - Carpeta `metadatablocks`: Almacena un json por cada bloque de metadatos existente en la instancia.
 - Carpeta `raw`: Almacena los metadatos de cada versión de cada dataset en jsons nombrados como [IDENTIFICADOR_DOI]-[VERSIÓN].json
-- Archio `inventory.csv`: Genera un inventario de todos los datasets presentes en la instancia.
-- Arcivo `version.json`: Almacena un resumen de la versión de la instancia de BioCultural.
+- Archivo `inventory.csv`: Genera un inventario de todos los datasets presentes en la instancia.
+- Archivo `version.json`: Almacena un resumen de la versión de la instancia de BioCultural.
+
+### Ceiba
+Para obtener todos los metadatos y archivos de los datasets de Ceiba ejecute el script [ceiba_ingest.py](/src/ingest/ceiba_ingest.py):
+```sh
+python3 -m src.ingest.ceiba_ingest
+```
+Los metadatos se almacenarán en la ruta establecida en el atributo `CEIBA_DATA_DIR/METADATA_DIR` del [.env](.env.example). Si se mantiene la ruta por defecto, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
+
+Se creará una carpeta para cada recurso, donde dentro se almacenará:
+- `files.json` para la ruta absoluta de los archivos del recurso.
+- `resource_metadata.json` que contiene la data del `eml.xml` de la última versión disponible, unido con la data almacenada en `resources.xml`.
 
 ## Logs
 Podrá encontrar los archivos de logs en la carpeta [logs](/src/logs/).

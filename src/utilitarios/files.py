@@ -2,8 +2,16 @@ import json
 import csv
 import io
 from pathlib import Path
+import openpyxl
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+def read_json(file_directory, filename):
+    file = BASE_DIR / file_directory / filename
+    
+    with open(file, "r", encoding='UTF-8') as f:
+        metadata_dict = json.load(f)
+    return metadata_dict
 
 def write_json(data, path, filename):
     try:
@@ -12,14 +20,13 @@ def write_json(data, path, filename):
         raw_filepath = raw_dirpath / filename
 
         with open(raw_filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(data, f, ensure_ascii=False, indent=2, default=str)
     except Exception as e:
         raise RuntimeError(f"An error ocurred while saving the JSON file in {raw_filepath}") from e
 
 def read_csv(path):
     """Read a UTF-8 CSV file with a header row; return a list of dictionaries."""
     return list(csv.DictReader(io.StringIO(Path(path).read_text(encoding="utf-8"))))
-
 
 def write_csv(rows, path, filename, fieldnames=None):
     try:
@@ -59,10 +66,20 @@ def save_file_as_stream(response, file_directory, folder_name, filename):
             part_filepath.unlink()
 
         raise IOError(f"An error ocurred while saving the ZIP in {final_filepath}") from e
-
-def load_json_metadata(file_directory, filename):
-    file = BASE_DIR / file_directory / filename
     
-    with open(file, "r", encoding='UTF-8') as f:
-        metadata_dict = json.load(f)
-    return metadata_dict
+def read_xlsx(wb, sheet_name):
+    """Reads an Excel's sheet of a file"""
+    
+    if sheet_name not in wb.sheetnames:
+        raise ValueError(f"La hoja {sheet_name} no existe.")
+        
+    sheet = wb[sheet_name]
+    
+    headers = [cell.value for cell in sheet[1]]
+    
+    rows = []
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        if any(row):
+            rows.append(dict(zip(headers, row)))
+            
+    return rows
