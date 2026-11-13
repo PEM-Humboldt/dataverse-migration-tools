@@ -30,16 +30,11 @@ def strip_link_data(link):
         }
 
 def inventory_row(rec):
-    """Creates two inventories of resources (one per row), one for general metadata and one for files."""
+    """Creates an inventory of resources with general metadata"""
     info = rec["geonet:info"]
     user = (rec.get("userinfo") or "").split("|")
     link = rec.get('link') or []
     files = link if isinstance(link, list) else [link]
-    ff = []
-
-    for f in files:
-        ff.append(strip_link_data(f))
-
     inventory_data = {
         "uuid": info["uuid"],
         "id": info["id"],
@@ -64,9 +59,4 @@ def inventory_row(rec):
         "change_date": info.get("changeDate", ""),
     }
 
-    files_data = {
-        "uuid": info["uuid"],
-        "files_urls": ff
-    }
-
-    return inventory_data, files_data
+    return inventory_data

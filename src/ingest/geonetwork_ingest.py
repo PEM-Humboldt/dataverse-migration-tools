@@ -53,15 +53,13 @@ def build_inventory():
 
     logger.info(f"The total of records found in Geonetwork is {total}")
 
-    record_files = []
     for start in range(PAGE_SIZE + 1, total + 1, PAGE_SIZE):
         logger.info(f"Retrieving record's metadata from {start} to {start + PAGE_SIZE}")
         records += extract_metadata(fetch_resources_page(start))
 
     for r in records:
-        data, files = inventory_row(r)
+        data = inventory_row(r)
         summary.append(data)
-        record_files.append(files)
     
     # Extracts all the uniques uuid values
     uuid_len = len({r["uuid"] for r in summary})
@@ -71,7 +69,6 @@ def build_inventory():
     
     summary.sort(key=lambda r: r["uuid"])
     write_csv(summary, Path(config.gn_data_dir) / "inventory", "inventory.csv")
-    write_csv(record_files, Path(config.gn_data_dir) / "inventory", "files_inventory.csv")
     
     return summary
 
