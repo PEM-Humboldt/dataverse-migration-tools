@@ -98,7 +98,7 @@ Para obtener todos los metadatos y las referencias de los archivos adjuntos a ca
 python3 -m src.ingest.geonetwork_ingest
 ```
 
-> Nota: Tenga presente que GeoNetwork maneja más de 6000 recursos. La ejecución completa del script puede tomar varios minutos. Si desea hacer una prueba controlada, puede descomentar la línea 143 del script `geonetwork_ingest.py`
+> Nota: Tenga presente que GeoNetwork maneja más de 6000 recursos. La ejecución completa del script puede tomar varios minutos. Si desea hacer una prueba controlada, puede descomentar la línea 191 del script `geonetwork_ingest.py`
 
 Los datos se almacenarán en la ruta `GN_DATA_DIR` del [.env](.env.example). Si se mantiene la ruta por defecto, se recomienda crear la carpeta `data` al mismo nivel del directorio `src`.
 
