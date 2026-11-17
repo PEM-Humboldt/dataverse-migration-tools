@@ -1,8 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 import time
-import xmltodict
+import xml.etree.ElementTree as ET
 import requests
+from src.ingest.utilitarios.xml_to_dict import parse_xml_with_prefixes, xml_to_dict_tree
 from src.config import Config
 from src.utilitarios.session import api_call    
 from src.formato.geonetwork_format import inventory_row
@@ -11,6 +12,48 @@ from src.utilitarios.logger import logger
 
 config = Config()
 PAGE_SIZE = 100
+LIST_TAGS = {"gmd:citedResponsibleParty",
+    "gmd:contact",
+    "gmd:contentInfo",
+    "gmd:credit",
+    "gmd:descriptiveKeywords",
+    "gmd:distributionFormat",
+    "gmd:distributor",
+    "gmd:electronicMailAddress",
+    "gmd:extent",
+    "gmd:graphicOverview",
+    "gmd:hierarchyLevel",
+    "gmd:hierarchyLevelName",
+    "gmd:keyword",
+    "gmd:levelDescription",
+    "gmd:onLine",
+    "gmd:pointOfContact",
+    "gmd:referenceSystemInfo",
+    "gmd:resourceConstraints",
+    "gmd:spatialRepresentationInfo",
+    "gmd:spatialRepresentationType",
+    "gmd:spatialResolution",
+    "gmd:topicCategory",
+    "gmd:transferOptions",
+    "srv:DCP",
+    "srv:connectPoint",
+    "srv:coupledResource",
+    "srv:operatesOn",
+    "srv:serviceTypeVersion",}
+INLINE_TAGS = {}
+STRING_TAGS = {"gco:CharacterString", "gco:RecordType", "gco:ScopedName"}
+DICT_TAGS = {
+    "gmd:CI_Address",
+    "gmd:CI_Telephone",
+    "gmd:EX_Extent",
+    "gmd:MD_DigitalTransferOptions",
+    "gmd:MD_ReferenceSystem",
+    "gmd:MD_StandardOrderProcess",
+    "gmd:linkage",
+    "gmd:parentIdentifier",
+    "gmd:temporalElement",
+    "srv:parameters",
+}
 
 def harvest_server():
     site = api_call("/api/site")
@@ -119,7 +162,10 @@ def harvest_single_uuid(uuid, steps):
         try:
             r = fetch_func(uuid)
             if step_name == 'xml':
-                write_json(xmltodict.parse(r.content), base_path, f"{uuid}.json")
+                # Hay que revisar esto, cómo pasarle oq ué pasarle a xml_to_dict_tree
+                root = parse_xml_with_prefixes(r.content)
+                dict = xml_to_dict_tree(root, INLINE_TAGS, LIST_TAGS, STRING_TAGS, DICT_TAGS)
+                write_json(dict, base_path, f"{uuid}.json")
             else:
                 write_bytes(r.content, base_path, f"{uuid}.json")
         except (requests.RequestException, ValueError, OSError) as e:
@@ -137,7 +183,7 @@ def harvest_records(uuids):
         ("sharing", fetch_record_sharing),
     ]
 
-    #uuids = uuids[:150]
+    uuids = uuids[:150]
     total=len(uuids)
 
     start_time = time.perf_counter()
