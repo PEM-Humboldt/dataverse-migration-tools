@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 import io
 
 def parse_xml_with_prefixes(xml_bytes):
-    """Parsea el XML reemplazando las URLs {http://...} por sus prefijos originales (gmd:, gco:, etc.)."""
+    """Parsing returns original prefixes instead of full url (gmd:, gco:, etc.)."""
     events = ("start", "start-ns")
     ns_map = {}
     root = None
@@ -15,7 +15,7 @@ def parse_xml_with_prefixes(xml_bytes):
         elif event == "start":
             if root is None:
                 root = elem
-            # Si la etiqueta tiene {uri}nombre, la regresamos a prefijo:nombre
+            # If tag is {uri}name, returns only prefix:name as the original xml
             if elem.tag.startswith("{"):
                 uri, tag_name = elem.tag[1:].split("}", 1)
                 prefix = ns_map.get(uri)
@@ -26,7 +26,7 @@ def parse_xml_with_prefixes(xml_bytes):
 def clean_inline_text(element):
     return " ".join("".join(element.itertext()).split())
 
-def validate_inline_tags_only(element, INLINE_TAGS):
+def validate_inline_tags_only(element, inline_tags):
     """Return True if the element has children, and ALL of them are formatting tags."""
     hijos = list(element)
     if not hijos:
@@ -36,13 +36,18 @@ def validate_inline_tags_only(element, INLINE_TAGS):
     for desc in element.iter():
         if desc is element:
             continue
-        if desc.tag not in INLINE_TAGS:
+        if desc.tag not in inline_tags:
             return False
 
     return True
 
-def xml_to_dict_tree(element, INLINE_TAGS = {}, LIST_TAGS = {}, STRING_TAGS = {}, DICT_TAGS = {}):
+def xml_to_dict_tree(element, tags = {}):
     """Turns XML to a dictionary"""
+
+    inline_tags = tags.get("inline_tags") or {}
+    list_tags = tags.get("list_tags") or {}
+    string_tags = tags.get("string_tags") or {}
+    dict_tags = tags.get("dict_tags") or {}
 
     # If the element has no children, then checks attributes and text only.
     if len(element) == 0:
@@ -55,7 +60,7 @@ def xml_to_dict_tree(element, INLINE_TAGS = {}, LIST_TAGS = {}, STRING_TAGS = {}
         return res
 
     # Checks if the element contains only formatting tags (e.g. <emphasis>) and returns the full text
-    if validate_inline_tags_only(element, INLINE_TAGS):
+    if validate_inline_tags_only(element, inline_tags):
         return clean_inline_text(element)
 
     # Keeps the hierarchical tags
@@ -69,18 +74,18 @@ def xml_to_dict_tree(element, INLINE_TAGS = {}, LIST_TAGS = {}, STRING_TAGS = {}
 
     # Loops over every child tag of current element
     for child in element:
-        child_val = xml_to_dict_tree(child, INLINE_TAGS, LIST_TAGS, STRING_TAGS, DICT_TAGS)
+        child_val = xml_to_dict_tree(child, tags)
 
-        # If the tag is in LIST_TAGS it sets the data in a list (always)
-        if child.tag in data or child.tag in LIST_TAGS:
+        # If the tag is in list_tags it sets the data in a list (always)
+        if child.tag in data or child.tag in list_tags:
             if child.tag not in data:
                 data[child.tag] = []
             elif not isinstance(data[child.tag], list):
                 data[child.tag] = [data[child.tag]]
             data[child.tag].append(child_val)
-        elif child.tag in data or child.tag in STRING_TAGS:
+        elif child.tag in data or child.tag in string_tags:
             data[child.tag] = "" if child_val is None else child_val
-        elif child.tag in data or child.tag in DICT_TAGS:
+        elif child.tag in data or child.tag in dict_tags:
             data[child.tag] = {} if child_val is None else child_val
         else:
             data[child.tag] = child_val

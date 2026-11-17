@@ -162,9 +162,14 @@ def harvest_single_uuid(uuid, steps):
         try:
             r = fetch_func(uuid)
             if step_name == 'xml':
-                # Hay que revisar esto, cómo pasarle oq ué pasarle a xml_to_dict_tree
                 root = parse_xml_with_prefixes(r.content)
-                dict = xml_to_dict_tree(root, INLINE_TAGS, LIST_TAGS, STRING_TAGS, DICT_TAGS)
+                tags = {
+                        "inline_tags": INLINE_TAGS,
+                        "list_tags": LIST_TAGS,
+                        "string_tags": STRING_TAGS,
+                        "dict_tags": DICT_TAGS
+                    }
+                dict = xml_to_dict_tree(root, tags)
                 write_json(dict, base_path, f"{uuid}.json")
             else:
                 write_bytes(r.content, base_path, f"{uuid}.json")
