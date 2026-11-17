@@ -12,33 +12,46 @@ from src.utilitarios.logger import logger
 
 config = Config()
 PAGE_SIZE = 100
-LIST_TAGS = {"gmd:citedResponsibleParty",
+LIST_TAGS = {"gmd:aggregationInfo",
+    "gmd:alternateTitle",
+    "gmd:citedResponsibleParty",
     "gmd:contact",
     "gmd:contentInfo",
     "gmd:credit",
+    "gmd:dataQualityInfo",
+    "gmd:date",
+    "gmd:deliveryPoint",
     "gmd:descriptiveKeywords",
+    "gmd:dimension",
     "gmd:distributionFormat",
     "gmd:distributor",
     "gmd:electronicMailAddress",
     "gmd:extent",
+    "gmd:geographicElement",
     "gmd:graphicOverview",
     "gmd:hierarchyLevel",
     "gmd:hierarchyLevelName",
     "gmd:keyword",
     "gmd:levelDescription",
+    "gmd:metadataConstraints",
     "gmd:onLine",
     "gmd:pointOfContact",
     "gmd:referenceSystemInfo",
     "gmd:resourceConstraints",
+    "gmd:resourceMaintenance",
+    "gmd:source",
     "gmd:spatialRepresentationInfo",
     "gmd:spatialRepresentationType",
     "gmd:spatialResolution",
+    "gmd:temporalElement",
     "gmd:topicCategory",
     "gmd:transferOptions",
+    "gmd:voice",
     "srv:DCP",
     "srv:connectPoint",
     "srv:coupledResource",
     "srv:operatesOn",
+    "srv:parameters",
     "srv:serviceTypeVersion",}
 INLINE_TAGS = {}
 STRING_TAGS = {"gco:CharacterString", "gco:RecordType", "gco:ScopedName"}
@@ -51,8 +64,6 @@ DICT_TAGS = {
     "gmd:MD_StandardOrderProcess",
     "gmd:linkage",
     "gmd:parentIdentifier",
-    "gmd:temporalElement",
-    "srv:parameters",
 }
 
 def harvest_server():
