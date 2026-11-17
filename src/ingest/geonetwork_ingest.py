@@ -122,7 +122,7 @@ def fetch_record_xml(u):
         if e.response is not None and e.response.status_code == 400:
             logger.warning(f"Unable to download formatted XML. Fetching raw XML instead for {u}.")
             url_raw = f"/api/records/{u}"
-            record = api_call(url_raw, accept="application/xml")
+            record = api_call(url_raw, accept="application/xml", increasePopularity="false")
         else:
             raise
     content = record.content.strip()
@@ -188,7 +188,7 @@ def harvest_records(uuids):
         ("sharing", fetch_record_sharing),
     ]
 
-    uuids = uuids[:150]
+    #uuids = uuids[:150]
     total=len(uuids)
 
     start_time = time.perf_counter()
