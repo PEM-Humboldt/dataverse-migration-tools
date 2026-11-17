@@ -2,7 +2,7 @@ from pathlib import Path
 import os
 import re
 import xml.etree.ElementTree as ET
-from ingest.utilitarios.xml_to_dict import xml_to_dict_tree
+from src.ingest.utilitarios.xml_to_dict import xml_to_dict_tree
 from src.formato.utilitarios.map_inventory import attach_inventory_data
 from src.config import Config
 from src.utilitarios.files import write_csv, write_json
@@ -91,7 +91,12 @@ def process_metadata(resource_dir):
 
         tree = ET.parse(filepath)
         root = tree.getroot()
-        data_dict = {root.tag: xml_to_dict_tree(root, INLINE_TAGS, LIST_TAGS)}
+
+        tags = {
+            "inline_tags": INLINE_TAGS,
+            "list_tags": LIST_TAGS
+        }
+        data_dict = {root.tag: xml_to_dict_tree(root, tags)}
 
         resource_dictionary = resource_dictionary | data_dict
     return {
