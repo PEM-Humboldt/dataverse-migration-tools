@@ -11,7 +11,7 @@ class Config:
         self.files_dir = os.getenv('FILES_DIR')
         self.i2d_inventory = os.getenv('INVENTORY_PATH')
         self.vocabularies = os.getenv('VOCABULARIES_PATH')
-
+        self.tsv_files = os.getenv('TSV_FILES_PATH')
 
         self.dv_origin_url = os.getenv('BIOCULTURAL_ORIGIN_URL')
         self.dv_origin_api_token = os.getenv('BIOCULTURAL_ORIGIN_API_TOKEN')

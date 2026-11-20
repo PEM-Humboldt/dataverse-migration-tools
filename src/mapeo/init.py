@@ -3,9 +3,10 @@ from pathlib import Path
 
 import openpyxl
 
+from src.mapeo.reconstruct_mapping import load_dv_schemas, unflatten_dataset
 from src.mapeo.biocultural_mapping_example import migrate_access, migrate_altered, migrate_bounding_boxes, migrate_contractors, migrate_data_collection_situation, migrate_data_collectors, migrate_date, migrate_external_references, migrate_geographic_coverage, migrate_geographic_unit, migrate_grant_numbers, migrate_institute_parties, migrate_institutional_projects, migrate_keywords, migrate_language, migrate_operations, migrate_periods, migrate_release_date, migrate_vocabulary, state_table, vocabulary_table
 from src.formato.utilitarios.mapping import normalize_string
-from src.utilitarios.files import read_json, read_xlsx
+from src.utilitarios.files import read_json, read_xlsx, write_json
 from src.config import Config
 
 config = Config()
@@ -111,7 +112,6 @@ def citation_block_mapping(final_dict, flat_data):
             'contributorName': contributor.get('contributorName')
         })
 
-
 def geospatial_block_mapping(final_dict, flat_data, states):
     geospatial_block = flat_data.get('geospatial') or {}
 
@@ -125,7 +125,6 @@ def geospatial_block_mapping(final_dict, flat_data, states):
         final_dict['geospatial']['geographicUnit'] = geographicUnit_value
 
     final_dict['geospatial']['geographicBoundingBox'] = migrate_bounding_boxes(geospatial_block.get('geographicBoundingBox'))
-
 
 def socialscience_block_mapping(final_dict, flat_data, vocabulary):
     socialscience_block = flat_data.get('socialscience') or {}
@@ -163,7 +162,6 @@ def socialscience_block_mapping(final_dict, flat_data, vocabulary):
         value = migrate_operations(socialscience_block.get(field))
         if value:
             final_dict['socialscience'][field] = value
-
 
 def institutional_block_mapping(final_dict, flat_data, raw_data, socioecologic_data):
     availabilityStatus = raw_data['datasetVersion'].get('availabilityStatus')
@@ -208,7 +206,6 @@ def institutional_block_mapping(final_dict, flat_data, raw_data, socioecologic_d
     if restricted_value:
         final_dict['institutional']['access']['restrictedUntil'] = restricted_value
 
-
 def external_ref_block_mapping(final_dict, flat_data, raw_data):
     persistentId = raw_data['datasetVersion']['datasetPersistentId']
     citation_block = flat_data.get('citation') or {}
@@ -216,7 +213,6 @@ def external_ref_block_mapping(final_dict, flat_data, raw_data):
     value = migrate_external_references(persistentId, citation_block.get('publication') or [], config.dv_origin_url)
     if value:
         final_dict['externalReferences']['externalReference'] = value   
-
 
 def mapping_main(raw_data, catalogs):
     # Start looping over each metadatablock
@@ -253,6 +249,11 @@ def mapping_main(raw_data, catalogs):
 
     return final_dict
 
+def recreate_structure_block():
+    files = Path(config.tsv_files)
+    for file in list(files.iterdir()):
+        raw_data = read_json(file)
+        raw_data['']
 def main():
     files = Path(config.dv_data_dir) / config.metadata_dir
 
@@ -268,10 +269,14 @@ def main():
         "socioecologic_data": socioecologic_data,
     }
 
+    schema = load_dv_schemas()
     count = 0
     for file in list(files.iterdir()):
         raw_data = read_json(file)
         mapped_dict = mapping_main(raw_data, catalogs)
+        dv_blocks = unflatten_dataset(mapped_dict, schema)
+
+        write_json(dv_blocks, Path(config.dv_data_dir) / 'final_mapped', file.name)
         count += 1 
 
     print(f"Finished {count}")
