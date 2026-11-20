@@ -65,8 +65,8 @@ def inventory_row(rec):
     return inventory_data
 
 def inventory_text(value):
-    """Cell value of the I2D inventory as stripped text ('' for an empty cell)."""
-    return str(value).strip() if value is not None else ""
+    """Cell value of the I2D inventory as stripped text ('' for an empty cell), with as_text()."""
+    return as_text(value).strip()
 
 def map_geografico_inventory(excel_file):
     """
