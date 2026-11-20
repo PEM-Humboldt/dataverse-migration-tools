@@ -10,6 +10,7 @@ class Config:
         self.metadata_dir = os.getenv('METADATA_DIR')
         self.files_dir = os.getenv('FILES_DIR')
         self.i2d_inventory = os.getenv('INVENTORY_PATH')
+        self.metadatablocks_dir = os.getenv('METADATABLOCKS_DIR')
 
         self.dv_origin_url = os.getenv('BIOCULTURAL_ORIGIN_URL')
         self.dv_origin_api_token = os.getenv('BIOCULTURAL_ORIGIN_API_TOKEN')
