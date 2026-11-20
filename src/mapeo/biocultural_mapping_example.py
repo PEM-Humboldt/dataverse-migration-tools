@@ -77,7 +77,15 @@ DEFAULT_LANGUAGE = "Spanish, Castilian"
 
 def migrate_language(languages):
     """citation/language of a version: the platform's languages, or [DEFAULT_LANGUAGE] if there are none."""
-    values = [v for v in languages or [] if v and v.strip()]
+    # values = [v for v in languages or [] if v and v.strip()]
+    values = []
+    if not languages:
+        languages = []
+
+    for v in languages:
+        if v and v.strip():
+            values.append(v.strip())
+
     return values or [DEFAULT_LANGUAGE]
 
 
@@ -140,9 +148,29 @@ def state_table(vocabulary_rows):
     Returns {source value (spaces reduced): (target field, target value)}, the target field being
     `state`, `city` or `otherGeographicCoverage`.
     """
-    return {" ".join(r["source_value"].split()): (r["target_path"].split("/")[-1], r["target_value"].strip())
-            for r in vocabulary_rows if r["path"].endswith("geographicCoverage/state")}
+    states = {}
 
+    for row in vocabulary_rows:
+        # Filters only the values from original 'state' field
+        if not row["path"].endswith("geographicCoverage/state"):
+            continue
+
+        # Cleans original value
+        raw_source = row["source_value"]
+        clean_source = " ".join(raw_source.split())
+
+        # Extracts target field
+        full_target_path = row["target_path"]
+        target_field = full_target_path.split("/")[-1]
+
+        # Clean final value
+        raw_target_value = row["target_value"]
+        clean_target_value = raw_target_value.strip()
+
+        # Saves states dictionary
+        states[clean_source] = (target_field, clean_target_value)
+
+    return states
 
 def migrate_geographic_coverage(entries, states):
     """geospatial/geographicCoverage of a version.
@@ -160,7 +188,9 @@ def migrate_geographic_coverage(entries, states):
         if "state" in e:
             source = e.pop("state")
             if source not in states:
-                raise ValueError(f"state value without a row in sheet vocabularies: {source!r}")
+                print(f"== ERROR STATES == NO SE ENCONTRRÓ UN EQUIVALENTE PARA {source!r}")
+                continue
+                #raise ValueError(f"state value without a row in sheet vocabularies: {source!r}")
             target, value = states[source]
             if target == "state":
                 state_values = [v.strip() for v in (value or "").split(";") if v.strip()] or [None]
@@ -247,7 +277,9 @@ def migrate_vocabulary(values, table):
             continue
         key = " ".join(value.split())
         if key not in table:
-            raise ValueError(f"value without a row in sheet vocabularies: {key[:80]!r}")
+            print(f"== ERROR VOCABULARIES === NO SE ENCONTRÓ UN EQUIVALENTE PARA: {key[:80]!r}")
+            continue
+            #raise ValueError(f"value without a row in sheet vocabularies: {key[:80]!r}")
         migrated += [v for v in table[key] if v not in migrated]
     return migrated
 
