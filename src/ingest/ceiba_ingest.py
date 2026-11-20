@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import re
 import xml.etree.ElementTree as ET
+from src.ingest.utilitarios.xml_to_dict import xml_to_dict_tree
 from src.formato.utilitarios.map_inventory import attach_inventory_data
 from src.config import Config
 from src.utilitarios.files import write_csv, write_json
@@ -90,7 +91,12 @@ def process_metadata(resource_dir):
 
         tree = ET.parse(filepath)
         root = tree.getroot()
-        data_dict = {root.tag: xml_to_dict_tree(root)}
+
+        tags = {
+            "inline_tags": INLINE_TAGS,
+            "list_tags": LIST_TAGS
+        }
+        data_dict = {root.tag: xml_to_dict_tree(root, tags)}
 
         resource_dictionary = resource_dictionary | data_dict
     return {
@@ -98,72 +104,6 @@ def process_metadata(resource_dir):
         'latest_version': latest_version,
         'ceiba_identifier': resource_dir.name
     }
-
-def clean_inline_text(element):
-    return " ".join("".join(element.itertext()).split())
-
-def validate_inline_tags_only(element):
-    """Return True if the element has children, and ALL of them are formatting tags."""
-    hijos = list(element)
-    if not hijos:
-        return False
-
-    # Checks all children for formatting tags, if any has other tags that are not inline, it returns False
-    for desc in element.iter():
-        if desc is element:
-            continue
-        if desc.tag not in INLINE_TAGS:
-            return False
-
-    return True
-
-def xml_to_dict_tree(element):
-    """Turns XML to a dictionary"""
-
-    # If the element has no children, then checks attributes and text only.
-    if len(element) == 0:
-        text = element.text.strip() if element.text else None
-        if not element.attrib:
-            return text
-        res = {f"@{k}": v for k, v in element.attrib.items()}
-        if text:
-            res["#text"] = text
-        return res
-
-    # Checks if the element contains only formatting tags (e.g. <emphasis>) and returns the full text
-    if validate_inline_tags_only(element):
-        return clean_inline_text(element)
-
-    # Keeps the hierarchical tags
-    data = {}
-    if element.attrib:
-        data.update({f"@{k}": v for k, v in element.attrib.items()})
-
-    text_fragments = []
-    if element.text and element.text.strip():
-        text_fragments.append(element.text.strip())
-
-    # Loops over every child tag of current element
-    for child in element:
-        child_val = xml_to_dict_tree(child)
-
-        # If the tag is in LIST_TAGS it sets the data in a list (always)
-        if child.tag in data or child.tag in LIST_TAGS:
-            if child.tag not in data:
-                data[child.tag] = []
-            elif not isinstance(data[child.tag], list):
-                data[child.tag] = [data[child.tag]]
-            data[child.tag].append(child_val)
-        else:
-            data[child.tag] = child_val
-
-        if child.tail and child.tail.strip():
-            text_fragments.append(child.tail.strip())
-
-    if text_fragments:
-        data["#text"] = " ".join(text_fragments)
-
-    return data
 
 def main():
     logger.info("=============== Ingesting Ceiba resources ===============")
