@@ -229,3 +229,18 @@ logs/
 /data_processed/
 *.csv
 *.xlsx
+
+# Metadatos generados por la ingesta de CEIBA
+resource_metadata.json
+files.json
+
+# Archivos temporales de Python
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Respaldos locales del código
+*_respaldo.py
+
+# Reportes locales del mapeo
+reporte_mapeo_local.json
