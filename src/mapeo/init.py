@@ -281,6 +281,6 @@ def main():
         write_json(raw_data, Path(config.dv_data_dir) / 'final_mapped', file.name)
         count += 1 
 
-    print(f"Finished {count}")
+    logger.info(f"Finished {count}")
 if __name__ == "__main__":
     main()
