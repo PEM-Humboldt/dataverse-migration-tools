@@ -8,6 +8,7 @@ from src.mapeo.biocultural_mapping_example import migrate_access, migrate_altere
 from src.formato.utilitarios.mapping import normalize_string
 from src.utilitarios.files import read_json, read_xlsx, write_json
 from src.config import Config
+from src.utilitarios import logger
 
 config = Config()
 
