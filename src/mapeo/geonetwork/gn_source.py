@@ -144,7 +144,7 @@ def read_record(uuid, data_dir, variables_by_path):
     None until related_from_links() (gn_mapping.py) fills it.
     """
     data_dir = Path(data_dir)
-    tree = read_json(data_dir / "xml", f"{uuid}.json")
+    tree = read_json(data_dir / "xml" / f"{uuid}.json")
     values, positions, units = {}, {}, {}
     links = {"operates_on": [], "sources": [], "parent": [], "aggregates": []}
     for path, indexed, value, uom in walk(tree, "gmd:MD_Metadata", "gmd:MD_Metadata"):
@@ -171,7 +171,7 @@ def read_record(uuid, data_dir, variables_by_path):
               "parties": find_parties(tree), "links": {k: list(dict.fromkeys(v)) for k, v in links.items()},
               "related": None}
     for name in ("sharing", "attachments"):
-        record[name] = read_json(data_dir / name, f"{uuid}.json")
+        record[name] = read_json(data_dir / name / f"{uuid}.json")
     return record
 
 
