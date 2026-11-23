@@ -143,7 +143,7 @@ def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
                             continue
                         sub_obj[sk] = {
                             "typeName": sk,
-                            "multiple": False,
+                            "multiple": meta.get("subfields", {}).get(sk, {}).get("multiple", False),
                             "typeClass": "controlledVocabulary" if sk in controlled_subs else "primitive",
                             "value": sv,
                         }
