@@ -13,6 +13,8 @@ dataset's row of sheet `socioecologico`; tables are the rows of sheets `vocabula
 import re
 import unicodedata
 
+from src.utilitarios import logger
+
 
 # ---------------------------------------------------------------------------------------------
 # Shared helpers
@@ -188,9 +190,8 @@ def migrate_geographic_coverage(entries, states):
         if "state" in e:
             source = e.pop("state")
             if source not in states:
-                print(f"== ERROR STATES == NO SE ENCONTRRÓ UN EQUIVALENTE PARA {source!r}")
-                continue
-                #raise ValueError(f"state value without a row in sheet vocabularies: {source!r}")
+                logger.warning(f"== ERROR STATES == NO SE ENCONTRRÓ UN EQUIVALENTE PARA {source!r}")
+                raise ValueError(f"state value without a row in sheet vocabularies: {source!r}")
             target, value = states[source]
             if target == "state":
                 state_values = [v.strip() for v in (value or "").split(";") if v.strip()] or [None]
@@ -277,9 +278,8 @@ def migrate_vocabulary(values, table):
             continue
         key = " ".join(value.split())
         if key not in table:
-            print(f"== ERROR VOCABULARIES === NO SE ENCONTRÓ UN EQUIVALENTE PARA: {key[:80]!r}")
-            continue
-            #raise ValueError(f"value without a row in sheet vocabularies: {key[:80]!r}")
+            logger.warning(f"== ERROR VOCABULARIES === NO SE ENCONTRÓ UN EQUIVALENTE PARA: {key[:80]!r}")
+            raise ValueError(f"value without a row in sheet vocabularies: {key[:80]!r}")
         migrated += [v for v in table[key] if v not in migrated]
     return migrated
 
