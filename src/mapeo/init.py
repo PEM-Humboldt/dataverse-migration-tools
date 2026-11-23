@@ -254,6 +254,7 @@ def recreate_structure_block():
     for file in list(files.iterdir()):
         raw_data = read_json(file)
         raw_data['']
+        
 def main():
     files = Path(config.dv_data_dir) / config.metadata_dir
 
@@ -276,7 +277,10 @@ def main():
         mapped_dict = mapping_main(raw_data, catalogs)
         dv_blocks = unflatten_dataset(mapped_dict, schema)
 
-        write_json(dv_blocks, Path(config.dv_data_dir) / 'final_mapped', file.name)
+        raw_data['datasetVersion']['metadataBlocks'] = dv_blocks
+        raw_data.pop('inventory_data', None)
+        
+        write_json(raw_data, Path(config.dv_data_dir) / 'final_mapped', file.name)
         count += 1 
 
     print(f"Finished {count}")
