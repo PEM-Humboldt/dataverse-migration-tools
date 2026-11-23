@@ -12,6 +12,10 @@ from src.config import Config
 config = Config()
 
 def clean_value(valor):
+    # A single compound field (multiple = false) is a dict of subfield objects: keeps the values only
+    if isinstance(valor, dict):
+        return {sub_key: sub_dict["value"] for sub_key, sub_dict in valor.items()}
+
     # If value is NOT a list, returns value
     if not isinstance(valor, list):
         return valor  # Lo devuelve tal cual, no hay nada que limpiar
@@ -130,7 +134,7 @@ def socialscience_block_mapping(final_dict, flat_data, vocabulary):
     socialscience_block = flat_data.get('socialscience') or {}
     citation_block = flat_data.get('citation') or {}
 
-    sc_direct_copy_fields = ['unitOfAnalysis', 'universe', 'timeMethod', 'collectorTraining', 'samplingProcedure', 'targetSampleActualSize', 'actionsToMinimizeLoss', 'weighting', 'responseRate', 'samplingErrorEstimates', 'otherDataAppraisal']
+    sc_direct_copy_fields = ['unitOfAnalysis', 'universe', 'timeMethod', 'collectorTraining', 'samplingProcedure', 'targetSampleSize', 'actionsToMinimizeLoss', 'weighting', 'responseRate', 'samplingErrorEstimates', 'otherDataAppraisal']
     for field in sc_direct_copy_fields:
         value = socialscience_block.get(field)
         if value:
@@ -249,12 +253,6 @@ def mapping_main(raw_data, catalogs):
 
     return final_dict
 
-def recreate_structure_block():
-    files = Path(config.tsv_files)
-    for file in list(files.iterdir()):
-        raw_data = read_json(file)
-        raw_data['']
-        
 def main():
     files = Path(config.dv_data_dir) / config.metadata_dir
 
@@ -282,6 +280,6 @@ def main():
         write_json(raw_data, Path(config.dv_data_dir) / 'final_mapped', file.name)
         count += 1 
 
-    print(f"Finished {count}")
+    logger.info(f"Finished {count}")
 if __name__ == "__main__":
     main()
