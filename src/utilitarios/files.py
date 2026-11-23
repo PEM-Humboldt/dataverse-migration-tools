@@ -6,8 +6,8 @@ import openpyxl
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-def read_json(file_directory, filename):
-    file = BASE_DIR / file_directory / filename
+def read_json(file_directory):
+    file = BASE_DIR / file_directory
     
     with open(file, "r", encoding='UTF-8') as f:
         metadata_dict = json.load(f)
@@ -80,6 +80,7 @@ def read_xlsx(wb, sheet_name):
     rows = []
     for row in sheet.iter_rows(min_row=2, values_only=True):
         if any(row):
-            rows.append(dict(zip(headers, row)))
+            clean_row = [str(val) if val is not None else "" for val in row]
+            rows.append(dict(zip(headers, clean_row)))
             
     return rows
