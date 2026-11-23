@@ -249,12 +249,6 @@ def mapping_main(raw_data, catalogs):
 
     return final_dict
 
-def recreate_structure_block():
-    files = Path(config.tsv_files)
-    for file in list(files.iterdir()):
-        raw_data = read_json(file)
-        raw_data['']
-        
 def main():
     files = Path(config.dv_data_dir) / config.metadata_dir
 
