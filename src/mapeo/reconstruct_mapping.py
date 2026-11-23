@@ -5,8 +5,9 @@ from src.config import Config
 config = Config()
 
 def load_dv_schemas():
-    """Lee todos los archivos .tsv de una carpeta y construye el diccionario `schema`."""
-    schema = {}
+    """Lee todos los archivos .tsv de una carpeta y construye `schema` y `vocabulary`."""
+    tsv_schema = {}
+    vocabulary = {}
     tsv_files = list(Path(config.tsv_files).glob("*.tsv"))
 
     for file_path in tsv_files:
@@ -14,6 +15,7 @@ def load_dv_schemas():
             reader = csv.reader(f, delimiter="\t")
             headers = []
             reading_fields = False
+            reading_vocab = False  # 1. Inicializar la bandera en False
 
             for row in reader:
                 if not row:
@@ -21,20 +23,28 @@ def load_dv_schemas():
 
                 first_cell = row[0].strip()
 
-                # 1. Detectar el inicio de la sección de campos
+                # Detectar el inicio de la sección de campos (solo guarda títulos y activa bandera)
                 if first_cell == "#datasetField":
                     headers = [h.strip() for h in row]
                     reading_fields = True
+                    reading_vocab = False
                     continue
 
-                # 2. Detectar si empieza otra sección (#controlledVocabulary, etc.) y detener lectura
+                # Detectar el inicio de vocabularios (SOLO guarda títulos y activa bandera, no lee datos aún)
+                if first_cell == "#controlledVocabulary":
+                    headers = [h.strip() for h in row]
+                    reading_fields = False
+                    reading_vocab = True
+                    continue
+
+                # Si empieza cualquier otra sección con '#', apagar ambas lecturas
                 if first_cell.startswith("#"):
                     reading_fields = False
+                    reading_vocab = False
                     continue
 
-                # 3. Procesar cada fila de campo
+                # Procesar filas de datos de #datasetField
                 if reading_fields and headers:
-                    # Emparejar encabezados con los valores de la fila
                     row_dict = dict(zip(headers, row))
                     field_name = row_dict.get("name", "").strip()
                     if not field_name:
@@ -42,59 +52,49 @@ def load_dv_schemas():
 
                     multiple = row_dict.get("allowmultiples", "").strip().upper() == "TRUE"
                     is_controlled = row_dict.get("allowControlledVocabulary", "").strip().upper() == "TRUE"
+                    required = row_dict.get("required", "").strip().upper() == "TRUE"
+                    controlled_vocab = row_dict.get("allowControlledVocabulary", "False").strip().upper() == "TRUE"
                     parent = row_dict.get("parent", "").strip()
 
                     if parent:
-                        # Si tiene `parent`, sabemos que el padre es un campo compuesto (`compound`)
-                        if parent not in schema:
-                            schema[parent] = {
+                        if parent not in tsv_schema:
+                            tsv_schema[parent] = {
                                 "multiple": True,
                                 "typeClass": "compound",
+                                "required": required,
+                                "controlled_vocab": controlled_vocab,
+                                "allowControlledVocabulary": controlled_vocab,
                                 "controlled_subfields": set(),
                             }
                         else:
-                            schema[parent]["typeClass"] = "compound"
+                            tsv_schema[parent]["typeClass"] = "compound"
 
-                        # Si el subcampo usa vocabulario controlado, lo anotamos en el padre
                         if is_controlled:
-                            schema[parent]["controlled_subfields"].add(field_name)
+                            tsv_schema[parent]["controlled_subfields"].add(field_name)
                     else:
-                        # Es un campo principal de primer nivel
-                        schema[field_name] = {
+                        tsv_schema[field_name] = {
                             "multiple": multiple,
                             "typeClass": "controlledVocabulary" if is_controlled else "primitive",
+                            "required": required,
+                            "allowControlledVocabulary": controlled_vocab,
                             "controlled_subfields": set(),
                         }
 
+                # 2. Procesar filas de datos de #controlledVocabulary (las filas que vienen debajo con row[0] vacío)
+                elif reading_vocab and headers:
+                    row_dict = dict(zip(headers, row))
+                    field_name = row_dict.get("DatasetField", "").strip()
+                    value = row_dict.get("Value", "").strip()
+                    
+                    if field_name and value:
+                        vocabulary.setdefault(field_name, []).append(value)
+
+    # 3. Retornar ambos diccionarios
+    schema = {
+        'tsv_schema': tsv_schema,
+        'vocabulary': vocabulary
+    }
     return schema
-
-def build_dv_value(value, is_compound=False, is_controlled=False):
-    """Envuelve valores internos cuando el campo es compuesto (compound)."""
-    if not is_compound:
-        return value
-
-    # Un compuesto puede ser una lista de dicts (multiple=True) o un dict único (multiple=False, ej. 'access')
-    items = value if isinstance(value, list) else [value]
-    wrapped_items = []
-
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        subfields = {}
-        for sub_key, sub_val in item.items():
-            if sub_val is None or sub_val == "":
-                continue
-            subfields[sub_key] = {
-                "typeName": sub_key,
-                "multiple": False,
-                "typeClass": "controlledVocabulary" if is_controlled else "primitive",
-                "value": sub_val,
-            }
-        if subfields:
-            wrapped_items.append(subfields)
-
-    return wrapped_items if isinstance(value, list) else (wrapped_items[0] if wrapped_items else None)
-
 
 def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
     """Reconstruye el diccionario de metadataBlocks en formato Dataverse JSON.
@@ -108,6 +108,8 @@ def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
     }
     """
     metadata_blocks = {}
+    tsv_schema = schema['tsv_schema']
+    vocabulary = schema['vocabulary']
 
     for block_name, fields_dict in final_dict.items():
         if not fields_dict:
@@ -118,10 +120,12 @@ def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
             if raw_val is None or raw_val == "" or raw_val == []:
                 continue
 
-            meta = schema.get(field_name, {})
+            meta = tsv_schema.get(field_name, {})
             type_class = meta.get("typeClass", "primitive")
+            required = meta.get("required", "False")
             multiple = meta.get("multiple", isinstance(raw_val, list))
             is_compound = type_class == "compound"
+            has_vocabulary = meta.get("allowControlledVocabulary")
 
             if is_compound:
                 # Si tiene subcampos controlados (como country en geographicCoverage)
@@ -136,9 +140,14 @@ def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
                         sub_obj[sk] = {
                             "typeName": sk,
                             "multiple": False,
+                            "required": required,
                             "typeClass": "controlledVocabulary" if sk in controlled_subs else "primitive",
                             "value": sv,
                         }
+
+                        if sk in controlled_subs:
+                            sub_obj[sk]["vocabulary"] = vocabulary.get(sk)
+
                     if sub_obj:
                         built.append(sub_obj)
                 final_val = built if multiple else (built[0] if built else None)
@@ -148,12 +157,23 @@ def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
             if not final_val and final_val is not False:
                 continue
 
-            dv_fields.append({
-                "typeName": field_name,
-                "multiple": multiple,
-                "typeClass": type_class,
-                "value": final_val,
-            })
+            if has_vocabulary:
+                dv_fields.append({
+                    "typeName": field_name,
+                    "multiple": multiple,
+                    "required": required,
+                    "typeClass": type_class,
+                    "value": final_val,
+                    "vocabulary": vocabulary.get(field_name)
+                })
+            else:
+                dv_fields.append({
+                    "typeName": field_name,
+                    "multiple": multiple,
+                    "required": required,
+                    "typeClass": type_class,
+                    "value": final_val,
+                })
 
         if dv_fields:
             metadata_blocks[block_name] = {
