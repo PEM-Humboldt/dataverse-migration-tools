@@ -134,7 +134,7 @@ def socialscience_block_mapping(final_dict, flat_data, vocabulary):
     socialscience_block = flat_data.get('socialscience') or {}
     citation_block = flat_data.get('citation') or {}
 
-    sc_direct_copy_fields = ['unitOfAnalysis', 'universe', 'timeMethod', 'collectorTraining', 'samplingProcedure', 'targetSampleActualSize', 'actionsToMinimizeLoss', 'weighting', 'responseRate', 'samplingErrorEstimates', 'otherDataAppraisal']
+    sc_direct_copy_fields = ['unitOfAnalysis', 'universe', 'timeMethod', 'collectorTraining', 'samplingProcedure', 'targetSampleSize', 'actionsToMinimizeLoss', 'weighting', 'responseRate', 'samplingErrorEstimates', 'otherDataAppraisal']
     for field in sc_direct_copy_fields:
         value = socialscience_block.get(field)
         if value:
