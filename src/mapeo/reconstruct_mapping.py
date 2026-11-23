@@ -125,9 +125,11 @@ def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
                 continue
 
             meta = schema.get(field_name, {})
-            type_class = meta.get("typeClass", "primitive")
-            required = meta.get("required", "False")
-            multiple = meta.get("multiple", isinstance(raw_val, list))
+            if field_name not in schema:
+                raise ValueError(f"{block_name}/{field_name}: field not in the block definitions (TSV_FILES_PATH)")
+            meta = schema[field_name]
+            type_class = meta["typeClass"]
+            multiple = meta["multiple"]
             is_compound = type_class == "compound"
 
             if is_compound:
