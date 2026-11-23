@@ -75,6 +75,12 @@ def load_dv_schemas():
 
                         if is_controlled:
                             tsv_schema[parent]["controlled_subfields"].add(field_name)
+
+                        # Cada subcampo con su propio `multiple` y `required` (de su fila del TSV, no del padre)
+                        tsv_schema[parent].setdefault("subfields", {})[field_name] = {
+                            "multiple": multiple,
+                            "required": required,
+                        }
                     else:
                         tsv_schema[field_name] = {
                             "multiple": multiple,
