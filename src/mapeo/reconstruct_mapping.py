@@ -143,7 +143,6 @@ def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
                         sub_obj[sk] = {
                             "typeName": sk,
                             "multiple": False,
-                            "required": required,
                             "typeClass": "controlledVocabulary" if sk in controlled_subs else "primitive",
                             "value": sv,
                         }
@@ -160,7 +159,6 @@ def unflatten_dataset(final_dict: dict, schema: dict) -> dict:
             dv_fields.append({
                 "typeName": field_name,
                 "multiple": multiple,
-                "required": required,
                 "typeClass": type_class,
                 "value": final_val,
             })
