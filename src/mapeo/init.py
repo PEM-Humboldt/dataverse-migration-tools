@@ -12,6 +12,10 @@ from src.config import Config
 config = Config()
 
 def clean_value(valor):
+    # A single compound field (multiple = false) is a dict of subfield objects: keeps the values only
+    if isinstance(valor, dict):
+        return {sub_key: sub_dict["value"] for sub_key, sub_dict in valor.items()}
+
     # If value is NOT a list, returns value
     if not isinstance(valor, list):
         return valor  # Lo devuelve tal cual, no hay nada que limpiar
