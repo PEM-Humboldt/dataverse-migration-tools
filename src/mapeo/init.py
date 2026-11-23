@@ -278,7 +278,6 @@ def main():
         dv_blocks = unflatten_dataset(mapped_dict, schema)
 
         raw_data['datasetVersion']['metadataBlocks'] = dv_blocks
-        raw_data.pop('inventory_data', None)
         
         write_json(raw_data, Path(config.dv_data_dir) / 'final_mapped', file.name)
         count += 1 
