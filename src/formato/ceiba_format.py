@@ -36,7 +36,8 @@ def map_biologico_inventory(excel_file):
                 'doi': row.get('DOI'),
                 'gbif_key': row.get('GBIF DATASET KEY'),
                 'url': url,
-                'contratista': row.get('Contratista')
+                'contratista': row.get('Contratista'),
+                'metadato_privado': row.get('(TEMPORAL) Metadato finalizado pero privado')
             }
 
     incoming_index = map_full_inventory(wb)
