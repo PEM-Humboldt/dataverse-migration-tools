@@ -56,6 +56,8 @@ Se tiene un archivo de variables de ambiente [.env.example](/.env.example):
     INVENTORY_PATH="/ruta/inventario/i2d" # Ruta absoluta al inventario I2D
     METADATA_DIR="raw" # Nombre de la carpeta donde se almacenarán los metadatos
     FILES_DIR="files"  # Nombre de la carpeta donde se almacenarán los archivos
+    VOCABULARIES_PATH="/ruta/a/vocabularies.xlsx" # Ruta absoluta al libro de equivalencias de vocabularios de Biocultural (hoja `vocabularies`)
+    TSV_FILES_PATH="/ruta/a/metadata_dataverse" # Ruta a la carpeta con las definiciones de los bloques de metadatos (<bloque>.tsv)
 
     # Dataverse 6.10.1 Instance
     DV_TARGET_URL = "http://dataverse.localhost" # URL de la instancia final de Dataverse
@@ -113,6 +115,30 @@ La estructura final se verá así:
 - Carpeta `xml`: Almacena un JSON por cada recurso, usando su ID como nombre de archivo. Dentro se almacenan los metadatos completos de cada recurso.
 - `groups.json`: Grupos de GeoNetwork
 - `site.json`: Información de la instancia de GeoNetwork
+
+## Mapeo de metadatos
+
+### GeoNetwork
+Para convertir la cosecha de GeoNetwork en registros de versión de Dataverse ejecute el script [geonetwork_mapping.py](/src/mapeo/geonetwork_mapping.py) después de la ingesta:
+```sh
+python3 -m src.mapeo.geonetwork_mapping
+```
+
+El script lee la cosecha (`GN_DATA_DIR`) y el inventario de la I2D (`INVENTORY_PATH`, hoja `Geográfico`, unida por el «ID GeoNetwork»), aplica la tabla de correspondencia y comprueba cada registro frente a las definiciones de los bloques de metadatos (`TSV_FILES_PATH`, leídas por `load_dv_schemas()`). Solo se migran los registros de datos: no los servicios web (`hierarchyLevel` = `service`), cuyos puntos de acceso pasan a los conjuntos de datos que sirven, ni los registros de `tablas/excluded_records.csv`.
+
+En la primera versión de la migración solo se transfieren los metadatos. Con la opción `--with-files`, el script prepara también los archivos de datos (adjuntos de GeoNetwork):
+```sh
+python3 -m src.mapeo.geonetwork_mapping --with-files
+```
+
+Los resultados se almacenarán en la ruta `GN_DATA_DIR`:
+- Carpeta `raw` (`METADATA_DIR`): un JSON por registro migrado, nombrado como [UUID]-1.0.json, con la forma `{"metadataLanguage", "datasetVersion", "inventory_data"}`. Los registros de GeoNetwork no tienen DOI: cada uno será un conjunto de datos nuevo con una sola versión.
+- `load_plan.csv`: una fila por registro: archivo de versión, si se publica después de la carga (`release` = `no` para los borradores), tipo de acceso y licencia; con `--with-files`, número de archivos, archivos restringidos y carpeta de los archivos.
+- `version_dates.csv`: las fechas originales de cada versión (`createDate` y `changeDate` de GeoNetwork), para restituirlas después de la carga. Las filas de los borradores (`draft` = `True`) no se aplican.
+- `mapping_problems.json`: los registros que no pasan la comprobación frente a los bloques; no reciben registro de versión.
+- `files_to_download.csv` (solo con `--with-files`): los adjuntos por descargar, con su URL, tamaño y carpeta de destino.
+
+Las tablas que usa el mapeo (correspondencia, variables de GeoNetwork, roles, organizaciones, personas, equivalencias, créditos, registros excluidos) son tablas revisadas a mano que contienen datos de los registros: nombres de personas, títulos, registros privados. Por eso **no se publican en este repositorio**: cada persona que ejecuta el mapeo las copia en [src/mapeo/geonetwork/tablas](/src/mapeo/geonetwork/tablas), donde git las ignora (regla `*.csv`). Su contenido, sus columnas y de dónde obtenerlas se describen en [tablas/README.md](/src/mapeo/geonetwork/tablas/README.md). El script se detiene si falta alguna. Un cambio de regla se hace en ellas o en las funciones de `src/mapeo/geonetwork/`.
 
 ## Logs
 Podrá encontrar los archivos de logs en la carpeta [logs](/src/logs/).
