@@ -199,7 +199,7 @@ def institutional_block_mapping(final_dict, flat_data, raw_data, socioecologic_d
         final_dict['institutional']['contractor'] = contractor_value
 
     final_dict['institutional']['access'] = {}
-    accessType_value = migrate_access(termsOfUse)
+    accessType_value, _ = migrate_access(termsOfUse)
     if accessType_value:
         final_dict['institutional']['access']['accessType'] = accessType_value
 
@@ -215,7 +215,11 @@ def external_ref_block_mapping(final_dict, flat_data, raw_data):
     persistentId = raw_data['datasetVersion']['datasetPersistentId']
     citation_block = flat_data.get('citation') or {}
 
-    value = migrate_external_references(persistentId, citation_block.get('publication') or [], config.dv_origin_url)
+    if "localhost" in str(config.dv_origin_url):
+        temp_url = "http://example.com"
+    else:
+        temp_url = config.dv_origin_url
+    value = migrate_external_references(persistentId, citation_block.get('publication') or [], temp_url)
     if value:
         final_dict['externalReferences']['externalReference'] = value   
 
@@ -277,8 +281,11 @@ def main():
         dv_blocks = unflatten_dataset(mapped_dict, schema)
 
         raw_data['datasetVersion']['metadataBlocks'] = dv_blocks
-        
-        write_json(raw_data, Path(config.dv_data_dir) / 'final_mapped', file.name)
+
+        identifier = file.name.split("-")[0]
+        dir_path = Path(config.dv_data_dir) / 'final_mapped' / identifier
+        dir_path.mkdir(parents=True, exist_ok=True)
+        write_json(raw_data, dir_path , file.name)
         count += 1 
 
     logger.info(f"Finished {count}")

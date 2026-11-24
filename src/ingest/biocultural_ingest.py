@@ -130,7 +130,7 @@ def download_version_files(file_id, label, extension, pid, current_v):
     folder_name = f"{identifier}-{current_v}"
 
     if response.status_code == 200:
-        files_path = Path(config.dv_data_dir)/Path(config.files_dir)
+        files_path = Path(config.dv_data_dir)/config.files_dir/identifier
         save_file_as_stream(response, files_path, folder_name, f"{label}.{extension}")
     else:
         api_message = response.json().get("message", "No details available")
