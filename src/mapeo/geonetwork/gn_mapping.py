@@ -9,6 +9,7 @@ import html
 import re
 import unicodedata
 from pathlib import Path
+from urllib.parse import quote
 
 from src.utilitarios.files import read_csv
 
@@ -33,6 +34,13 @@ TEXTBOX_FIELDS = frozenset({
     "geogPurpose", "attributeDescription", "geographicQualityControl", "lineage", "geographicBiases",
     "projectDescription", "projectDesignDescription", "projectStudyArea", "projectFunding", "acknowledgement",
     "citationText", "externalReferenceNote"})
+# campos de tipo url de los bloques (fieldType en los .tsv): Dataverse 6.10.1 no acepta una URL con espacios o
+# letras con tilde (p. ej. un adjunto «HOJA METODOLÓGICA.pdf»), así que se codifican con % (ver quote_url())
+URL_FIELDS = frozenset({
+    "alternativeURL", "keywordTermURI", "keywordVocabularyURI", "topicClassVocabURI", "publicationURL", "producerURL",
+    "producerLogoURL", "distributorURL", "distributorLogoURL", "illustrationFile", "externalReferenceURL"})
+# caracteres que quote_url() deja como están: los reservados de las URL (RFC 3986) y «%» (lo ya codificado)
+URL_SAFE = ":/?#[]@!$&'()*+,;=%~"
 
 
 def load_tables(mapping_dir=TABLES_DIR, mentions_dir=TABLES_DIR):
@@ -771,11 +779,28 @@ def textbox_html(value, name=None):
     return value
 
 
+def quote_url(url):
+    """The URL with the characters Dataverse refuses percent-encoded (UTF-8): spaces, letters with accents and the
+    other characters outside URL_SAFE. A valid URL, or one already encoded, does not change."""
+    return quote(url, safe=URL_SAFE)
+
+
+def quote_urls(value, name=None):
+    """The fields of a block (simple form, compounds included) with the values of URL_FIELDS encoded (quote_url())."""
+    if isinstance(value, dict):
+        return {key: quote_urls(item, key) for key, item in value.items()}
+    if isinstance(value, list):
+        return [quote_urls(item, name) for item in value]
+    if isinstance(value, str) and name in URL_FIELDS:
+        return quote_url(value)
+    return value
+
+
 def dataverse_fields(record, tables, inventory, additions=None):
     """All Dataverse fields of a record: {block: {field: value}}, plus `additions` from service_additions().
 
     `inventory`: the inventory data of the record (structure of attach_inventory_data(), see map_institutional()).
-    The texts of the textbox fields are written in HTML (to_html()).
+    The texts of the textbox fields are written in HTML (to_html()) and the URLs are percent-encoded (quote_url()).
     """
     citation = map_citation_simple(record)
     citation["author"] = map_authors(record, tables)
@@ -795,4 +820,4 @@ def dataverse_fields(record, tables, inventory, additions=None):
     blocks = {"citation": citation, "geospatial": map_geospatial(record), "geographic": geographic,
               "institutional": map_institutional(inventory),
               "externalReferences": {"externalReference": references}}
-    return {block: textbox_html(fields) for block, fields in blocks.items() if fields}
+    return {block: textbox_html(quote_urls(fields)) for block, fields in blocks.items() if fields}
