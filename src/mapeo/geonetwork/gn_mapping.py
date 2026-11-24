@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from src.utilitarios.files import read_csv
+from src.utilitarios.logger import logger
 
 INSTITUTE = "Instituto de Investigación de Recursos Biológicos Alexander von Humboldt"
 INSTITUTE_ROR = "https://ror.org/026dk4f10"
@@ -365,8 +366,30 @@ def map_authors(record, tables):
     return authors
 
 
+BOX_SIDES = ("westLongitude", "eastLongitude", "southLatitude", "northLatitude")
+
+
+def box_problem(box):
+    """Why Dataverse 6.10.1 would refuse a bounding box ({side: text}), or None if it is valid: the four sides
+    filled with numbers, longitudes between -180 and 180, latitudes between -90 and 90, East greater than West
+    and North greater than South."""
+    if any(side not in box for side in BOX_SIDES):
+        return "faltan lados"
+    try:
+        west, east, south, north = (float(box[side]) for side in BOX_SIDES)
+    except ValueError:
+        return "un lado no es un número"
+    if not (-180 <= west <= 180 and -180 <= east <= 180 and -90 <= south <= 90 and -90 <= north <= 90):
+        return "fuera de rango"
+    problems = [text for bad, text in ((west >= east, "oeste ≥ este"), (south >= north, "sur ≥ norte")) if bad]
+    return "; ".join(problems) or None
+
+
 def map_geospatial(record):
-    """geospatial: country (fixed «Colombia»), coverage description and bounding boxes, copied as they are."""
+    """geospatial: country (fixed «Colombia»), coverage description and bounding boxes, copied as they are.
+
+    A bounding box that Dataverse would refuse (box_problem()) is left out, with a message in the log, so that the
+    record loads; it is corrected in GeoNetwork or in the curation phase (team decision of 24/11/2026)."""
     fields = {"geographicCoverage": [{"country": "Colombia"}]}
     descriptions = [clean(d) for d in vals(record, "id_extent_description") if norm_key(d) not in ("", "ground condition")]
     if descriptions:
@@ -377,8 +400,15 @@ def map_geospatial(record):
         for g in groups(record, names, "gmd:geographicElement"):
             box = {target: g[prefix + side][0] for side, target in (("west", "westLongitude"), ("east", "eastLongitude"),
                    ("north", "northLatitude"), ("south", "southLatitude")) if g.get(prefix + side)}
-            if box:
-                boxes.append(box)
+            if not box:
+                continue
+            problem = box_problem(box)
+            if problem:
+                logger.warning(f"Registro {record['uuid']}: envolvente geográfica no válida ({problem}: "
+                               + ", ".join(f"{side} {box.get(side, '')}" for side in BOX_SIDES)
+                               + "), se deja vacía; se corrige en GeoNetwork o en la fase de cura")
+                continue
+            boxes.append(box)
     if boxes:
         fields["geographicBoundingBox"] = unique(boxes, lambda b: tuple(sorted(b.items())))
     return fields
