@@ -58,6 +58,10 @@ Se tiene un archivo de variables de ambiente [.env.example](/.env.example):
     FILES_DIR="files"  # Nombre de la carpeta donde se almacenarán los archivos
     VOCABULARIES_PATH="/ruta/a/vocabularies.xlsx" # Ruta absoluta al libro de equivalencias de vocabularios de Biocultural (hoja `vocabularies`)
     TSV_FILES_PATH="/ruta/a/metadata_dataverse" # Ruta a la carpeta con las definiciones de los bloques de metadatos (<bloque>.tsv)
+
+    # Dataverse 6.10.1 Instance
+    DV_TARGET_URL = "http://dataverse.localhost" # URL de la instancia final de Dataverse
+    DV_TARGET_API_TOKEN="" # Token de usuario administrador de instancia final de Dataverse
 ```
 
 Genere su archivo `.env` copiando el `env.example`:
