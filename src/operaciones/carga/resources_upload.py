@@ -529,14 +529,14 @@ def create_version(version, only, DOI, DOI_NEW, dir_path, total_files, correspon
                     payload = payload
 
                 # Checks the current dataset's ID
-                api_url += "/datasets/:persistentId?persistentId={0}".format(DOI_NEW)
+                api_url = "/api/datasets/:persistentId?persistentId={0}".format(DOI_NEW)
                 url = config.dv_origin_url + api_url 
                 r = config.api_target.get_request(url, auth=True)
                 dataset_id = r.json()['data']['id']
 
                 # Uses said ID to send the put_request to update the metadata
                 payload['datasetId']=dataset_id
-                api_url += "/datasets/:persistentId/versions/:draft?persistentId={0}".format(DOI_NEW)
+                api_url = "/api/datasets/:persistentId/versions/:draft?persistentId={0}".format(DOI_NEW)
                 url = config.dv_origin_url + api_url 
                 check_lock(DOI_NEW)
                 r = config.api_target.put_request(url, data=json.dumps(payload), auth=True)
