@@ -89,7 +89,7 @@ def publish_version(vm, DOI_NEW):
         else:
             resp = config.api_target.publish_dataset(DOI_NEW, 'major')
 
-        print("--- After calling publish_dataset(), response is (fingers crossed): ", resp)
+        print("--- After calling publish_dataset(), response is (fingers crossed): ", resp.json())
         if resp.status_code == 200:
             return True
         else:
@@ -558,43 +558,43 @@ def create_version(version, only, DOI, DOI_NEW, dir_path, total_files, correspon
                 print("Total files: ", total_files)
 
                 # Delete files
-                du_files = check_delete_files(files_list, total_files)
-                print("--- Deleting files ... ", du_files)
-                if len(du_files) > 0:
-                    status = delete_files(du_files, total_files, DOI_NEW)
-                    if status == False:
-                        return False, correspondence, first
-                    r = config.api_target.get_dataset(DOI_NEW, ":latest")
-                    if r.status_code == 503:
-                        logger.critical("503 - Server {} is unavailable".format(config.base_url_target))
-                        sys.exit()
-                    if r.status_code != 200:
-                        logger.error("create_version func: Get dataset metadata error for {}, status {}".format(DOI, r.status_code ))
-                        return False, correspondence, first
-                    fields = r.json()['data']['latestVersion']['metadataBlocks']['citation']['fields']
-                    for field in fields:
-                        if field['typeName'] == 'producer':
-                            fs = payload['metadataBlocks']['citation']['fields']
-                            ex = False
-                            for f in fs:
-                                if field['typeName'] == 'producer':
-                                    ex = True
-                                    break
-                            if not ex:
-                                payload['metadataBlocks']['citation']['fields'].append(field)
-                            break
+                # du_files = check_delete_files(files_list, total_files)
+                # print("--- Deleting files ... ", du_files)
+                # if len(du_files) > 0:
+                #     status = delete_files(du_files, total_files, DOI_NEW)
+                #     if status == False:
+                #         return False, correspondence, first
+                #     r = config.api_target.get_dataset(DOI_NEW, ":latest")
+                #     if r.status_code == 503:
+                #         logger.critical("503 - Server {} is unavailable".format(config.base_url_target))
+                #         sys.exit()
+                #     if r.status_code != 200:
+                #         logger.error("create_version func: Get dataset metadata error for {}, status {}".format(DOI, r.status_code ))
+                #         return False, correspondence, first
+                #     fields = r.json()['data']['latestVersion']['metadataBlocks']['citation']['fields']
+                #     for field in fields:
+                #         if field['typeName'] == 'producer':
+                #             fs = payload['metadataBlocks']['citation']['fields']
+                #             ex = False
+                #             for f in fs:
+                #                 if field['typeName'] == 'producer':
+                #                     ex = True
+                #                     break
+                #             if not ex:
+                #                 payload['metadataBlocks']['citation']['fields'].append(field)
+                #             break
 
-                # Add files
-                print("--- Adding files ...")
-                a_files = check_add_files(files_list, total_files)
-                print("These are the new files found:", a_files)
-                status = add_files(a_files[0], DOI_NEW, dir_path, total_files)
-                print("Finished adding the new files. Status =>", status)
-                if status == False:
-                    return False, correspondence, first, DOI, DOI_NEW
+                # # Add files
+                # print("--- Adding files ...")
+                # a_files = check_add_files(files_list, total_files)
+                # print("These are the new files found:", a_files)
+                # status = add_files(a_files[0], DOI_NEW, dir_path, total_files)
+                # print("Finished adding the new files. Status =>", status)
+                # if status == False:
+                #     return False, correspondence, first, DOI, DOI_NEW
 
-                print("I'm about to update files...")
-                update_files(a_files[1], total_files, DOI_NEW)
+                # print("I'm about to update files...")
+                # update_files(a_files[1], total_files, DOI_NEW)
 
                 print("In this version: ", v)
                 if v != ':draft':
