@@ -208,7 +208,7 @@ def update_files(files_list, total_files, DOI_NEW):
         if check == False:
             return check
         resp = requests.post(url, files=files, headers=headers)
-        logger.debug("Update file metadata status ".format(resp.status_code))
+        logger.debug("Update file metadata status {}".format(resp.status_code))
         if resp.status_code == 503: 
             logger.critical("503 - Server {} is unavailable".format(config.dv_target_url))
             sys.exit()
