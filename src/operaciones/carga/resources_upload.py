@@ -18,10 +18,10 @@ def take_version(filename):
     version = filename.split("-")[-1]
 
     if version == "DRAFT":
-        return sys.maxsize
+        return (sys.maxsize, 0)
 
     major, minor = version.split(".")
-    return int(major) + int(minor) / (len(minor) * 10)
+    return (int(major), int(minor))
 
 def check_lock(DOI_NEW):
     print("==== Starting Check lock...")
