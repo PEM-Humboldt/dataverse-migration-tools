@@ -13,7 +13,7 @@ dataset's row of sheet `socioecologico`; tables are the rows of sheets `vocabula
 import re
 import unicodedata
 
-from src.utilitarios import logger
+from src.utilitarios.logger import logger
 
 
 # ---------------------------------------------------------------------------------------------

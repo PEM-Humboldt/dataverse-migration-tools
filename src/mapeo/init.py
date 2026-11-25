@@ -75,7 +75,7 @@ def citation_block_mapping(final_dict, flat_data):
     }
 
     for field, func in transform_fields.items():
-        if citation_block.get(field):
+        if citation_block.get(field) or field == 'language':
             final_dict['citation'][field] = func(citation_block.get(field))
 
     # Compound fields
