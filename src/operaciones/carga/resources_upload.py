@@ -29,7 +29,7 @@ def check_lock(DOI_NEW):
         lock = config.api_target.get_dataset_lock(DOI_NEW)
         print("LOCK Response: ", lock)
         if lock.status_code == 503:
-            logger.critical("503 - Server {} is unavailable".format(config.base_url_target))
+            logger.critical("503 - Server {} is unavailable".format(config.dv_target_url))
             sys.exit()
         a = 0
         while len(lock.json()['data']) > 0 and a < 300:
@@ -39,7 +39,7 @@ def check_lock(DOI_NEW):
             a = a + 1
             lock = config.api_target.get_dataset_lock(DOI_NEW)
             if lock.status_code == 503:
-                logger.critical("503 - Server {} is unavailable".format(config.base_url_target))
+                logger.critical("503 - Server {} is unavailable".format(config.dv_target_url))
                 sys.exit()
             if lock.status_code != 200:
                 logger.error("check_lock func: lock status {} for {}".format(lock.status_code, DOI_NEW))
@@ -166,13 +166,13 @@ def delete_files(files_list, total_files, DOI_NEW):
     for file in files_list:
         old_id = file['dataFile']['id']
         new_id = total_files[old_id]['new_id']
-        url = config.base_url_target + "/dvn/api/data-deposit/v1.1/swordv2/edit-media/file/" + str(new_id)
+        url = config.dv_target_url + "/dvn/api/data-deposit/v1.1/swordv2/edit-media/file/" + str(new_id)
         check = check_lock(DOI_NEW)
         if check == False:
             return check
-        req = requests.delete(url, auth=(config.api_token_target, ''))
+        req = requests.delete(url, auth=(config.dv_target_api_token, ''))
         if req.status_code == 503:
-            logger.critical("503 - Server is unavailable {}", config.base_url_target)
+            logger.critical("503 - Server {} is unavailable".format(config.dv_target_url))
             sys.exit()
         if req.status_code == 200 or req.status_code == 204:
             del total_files[old_id]
@@ -182,7 +182,7 @@ def delete_files(files_list, total_files, DOI_NEW):
     return True
 
 def update_files(files_list, total_files, DOI_NEW):
-    headers = {'X-Dataverse-key': config.api_token_target}
+    headers = {'X-Dataverse-key': config.dv_target_api_token}
     for file in files_list:
         old_id = file["dataFile"]["id"]
         new_id = total_files[old_id]['new_id']
@@ -200,7 +200,7 @@ def update_files(files_list, total_files, DOI_NEW):
         if 'provFreeform' in file:
             metadata_json["provFreeform"] = file['provFreeform']
 
-        url = config.base_url_target + '/api/files/{0}/metadata'.format(new_id)
+        url = config.dv_target_url + '/api/files/{0}/metadata'.format(new_id)
 
         json_input = io.StringIO(json.dumps(metadata_json))
         files = { 'jsonData': json_input}
@@ -210,7 +210,7 @@ def update_files(files_list, total_files, DOI_NEW):
         resp = requests.post(url, files=files, headers=headers)
         logger.debug("Update file metadata status ".format(resp.status_code))
         if resp.status_code == 503: 
-            logger.critical("503 - Server is unavailable {}", config.base_url_target)
+            logger.critical("503 - Server {} is unavailable".format(config.dv_target_url))
             sys.exit()
 
 
@@ -286,14 +286,14 @@ def add_files(files_list, DOI_NEW, dir_path, total_files):
             url = config.api_target.base_url_api_native
             url += "/datasets/:persistentId/add?persistentId={0}".format(DOI_NEW)
             files = {'file': (filename, open(full_filename, 'rb'), typeFile)}
-            headers = {'X-Dataverse-key': config.api_token_target}
+            headers = {'X-Dataverse-key': config.dv_target_api_token}
             check = check_lock(DOI_NEW)
             if check == False:
                 return check
             resp = requests.post(url, data={"jsonData": df.json()}, files=files, headers=headers)
 
             if resp.status_code == 503:
-                logger.critical("503 - Server {} is unavailable".format(config.base_url_target))
+                logger.critical("503 - Server {} is unavailable".format(config.dv_target_url))
                 sys.exit()
             if resp.status_code == 200:
                 old_id = file["dataFile"]["id"]
@@ -483,7 +483,7 @@ def create_version(version, only, DOI, DOI_NEW, dir_path, total_files, correspon
 
                 if resp.status_code == 503:
                     print("❌ Critical error. Check logs.")
-                    logger.critical("503 - Server {} is unavailable".format(config.base_url_target))
+                    logger.critical("503 - Server {} is unavailable".format(config.dv_target_url))
                     sys.exit()
                 if resp.status_code == 200 or resp.status_code == 201:
                     print(" ✅ Creation of dataset's version was sucessfull")
@@ -542,7 +542,7 @@ def create_version(version, only, DOI, DOI_NEW, dir_path, total_files, correspon
                 r = config.api_target.put_request(url, data=json.dumps(payload), auth=True)
 
                 if r.status_code == 503:
-                    logger.critical(" ❌ 503 - Server {} is unavailable".format(config.base_url_target))
+                    logger.critical(" ❌ 503 - Server {} is unavailable".format(config.dv_target_url))
                     sys.exit()
                 if r.status_code != 200:
                     logger.error("❌ create_version func: Update dataset metadata error for {}, status {}".format(DOI, r.status_code) )
@@ -566,7 +566,7 @@ def create_version(version, only, DOI, DOI_NEW, dir_path, total_files, correspon
                 #         return False, correspondence, first
                 #     r = config.api_target.get_dataset(DOI_NEW, ":latest")
                 #     if r.status_code == 503:
-                #         logger.critical("503 - Server {} is unavailable".format(config.base_url_target))
+                #         logger.critical("503 - Server {} is unavailable".format(config.dv_target_url))
                 #         sys.exit()
                 #     if r.status_code != 200:
                 #         logger.error("create_version func: Get dataset metadata error for {}, status {}".format(DOI, r.status_code ))
