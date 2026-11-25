@@ -116,3 +116,16 @@ La estructura final se verá así:
 
 ## Logs
 Podrá encontrar los archivos de logs en la carpeta [logs](/src/logs/).
+
+## Mapeo de datos
+
+### BioCultural
+
+Para ejecutar el mapeo de los datos es necesario definir las siguientes variables adicionales:
+```
+TSV_FILES_PATH= # Ruta absoluta a los archivos TSV con los bloques de metadatos finales
+VOCABULARIES_PATH= # Ruta absoluta con el archivo excel de migración, donde esté la hoja "vocabularies" con el mapeo de vocabularios
+```
+
+Corra el script con:
+`python3 -m src.mapeo.init
