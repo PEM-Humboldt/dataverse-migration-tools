@@ -106,10 +106,33 @@ def validar_recurso(ruta, schema):
 
         reporte["dataset_eml"] = True
 
-        # 3. Construir diccionario intermedio
+        # 3. Recuperar el identificador original del EML
+        # Se conserva completo, incluida la versión publicada.
+        raiz_eml = next(
+            (
+                contenido
+                for clave, contenido in datos.items()
+                if isinstance(clave, str)
+                and (
+                    clave == "eml"
+                    or clave == "eml:eml"
+                    or clave.endswith("}eml")
+                )
+                and isinstance(contenido, dict)
+            ),
+            None,
+        )
+
+        identificador_eml = (
+            raiz_eml.get("@packageId")
+            if raiz_eml is not None
+            else None
+        )
+
+        # 4. Construir diccionario intermedio
         intermedio = construir_citation_intermedio(
             dataset,
-            identificador_ceiba=identificador,
+            identificador_ceiba=identificador_eml,
         )
 
         citation = intermedio.get("citation", {})

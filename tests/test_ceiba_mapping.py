@@ -61,7 +61,7 @@ def test_mapeo_intermedio():
     # Identificador
     assert (
         citation["otherId"][0]["otherIdAgency"]
-        == "CEIBA"
+        == "IPT Ceiba (I2D)"
     )
 
     assert (
@@ -105,4 +105,8 @@ def test_dataset_vacio():
 
     resultado = construir_citation_intermedio({})
 
-    assert resultado == {}
+    assert resultado == {
+        "citation": {
+            "subject": ["Earth and Environmental Sciences"]
+        }
+    }

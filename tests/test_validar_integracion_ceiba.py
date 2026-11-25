@@ -17,13 +17,19 @@ def crear_recurso(tmp_path):
     ruta = directorio / "resource_metadata.json"
 
     datos = {
-        "dataset": {
-            "title": "Biodiversidad de Colombia",
-            "abstract": {
-                "para": "Inventario de biodiversidad"
-            },
-            "keywordSet": {
-                "keyword": ["Biodiversidad", "Colombia"]
+        "{eml://ecoinformatics.org/eml-2.1.1}eml": {
+            "@packageId": (
+                "http://i2d.humboldt.org.co/ceiba/"
+                "resource.do?id=recurso_prueba/v5"
+            ),
+            "dataset": {
+                "title": "Biodiversidad de Colombia",
+                "abstract": {
+                    "para": "Inventario de biodiversidad"
+                },
+                "keywordSet": {
+                    "keyword": ["Biodiversidad", "Colombia"]
+                }
             }
         }
     }
@@ -43,7 +49,7 @@ def test_recurso_correcto(tmp_path):
     resultado = validar_recurso(ruta, schema)
 
     assert resultado["estado"] == "CORRECTO"
-    assert resultado["campos_dataverse"] == 4
+    assert resultado["campos_dataverse"] == 5
 
 
 def test_recurso_sin_eml(tmp_path):
@@ -115,3 +121,40 @@ def test_valor_diferente(tmp_path):
 
     assert resultado["estado"] == "INCOMPLETO"
     assert "title" in resultado["error"]
+
+
+def test_identificador_completo_desde_eml(tmp_path):
+    """
+    Comprueba que el identificador procede de @packageId
+    y conserva la versión publicada del recurso.
+    """
+    ruta = crear_recurso(tmp_path)
+    schema = load_dv_schemas()
+
+    resultado = validar_recurso(ruta, schema)
+
+    assert resultado["estado"] == "CORRECTO"
+    assert resultado["identificador_ceiba"] is True
+
+    # Verificar también el valor que llega al mapeador.
+    with patch(
+        "src.mapeo.validar_integracion_ceiba."
+        "construir_citation_intermedio",
+        wraps=__import__(
+            "src.mapeo.ceiba_mapping",
+            fromlist=["construir_citation_intermedio"]
+        ).construir_citation_intermedio,
+    ) as mapeador:
+
+        validar_recurso(ruta, schema)
+
+        identificador = (
+            mapeador.call_args.kwargs["identificador_ceiba"]
+        )
+
+    assert identificador == (
+        "http://i2d.humboldt.org.co/ceiba/"
+        "resource.do?id=recurso_prueba/v5"
+    )
+
+    assert identificador != ruta.parent.name

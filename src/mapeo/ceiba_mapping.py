@@ -1,3 +1,4 @@
+from datetime import date
 """
 Mapeo intermedio de metadatos CEIBA hacia Dataverse.
 
@@ -17,8 +18,80 @@ Incluye:
 No incorpora autores ni contactos.
 """
 
+import csv
 import re
+from functools import lru_cache
+from pathlib import Path
 import unicodedata
+
+
+@lru_cache(maxsize=1)
+def cargar_vocabulario_idiomas():
+    """
+    Obtiene equivalencias ISO 639-2 -> valor Dataverse
+    desde metadata_dataverse/citation.tsv.
+    """
+    ruta_tsv = (
+        Path(__file__).resolve().parents[2]
+        / "metadata_dataverse"
+        / "citation.tsv"
+    )
+
+    equivalencias = {}
+
+    with ruta_tsv.open(
+        encoding="utf-8-sig",
+        newline=""
+    ) as archivo:
+        lector = csv.reader(archivo, delimiter="\t")
+        encabezados = None
+        leyendo_vocabulario = False
+
+        for fila in lector:
+            if not fila:
+                continue
+
+            primera = fila[0].strip()
+
+            if primera == "#controlledVocabulary":
+                encabezados = [valor.strip() for valor in fila]
+                leyendo_vocabulario = True
+                continue
+
+            if primera.startswith("#"):
+                leyendo_vocabulario = False
+                continue
+
+            if not leyendo_vocabulario or not encabezados:
+                continue
+
+            registro = dict(zip(encabezados, fila))
+
+            if registro.get("DatasetField", "").strip() != "language":
+                continue
+
+            codigo = registro.get("identifier", "").strip().lower()
+            valor = registro.get("Value", "").strip()
+
+            if codigo and valor:
+                equivalencias[codigo] = valor
+
+    return equivalencias
+
+
+def mapear_idioma(valor):
+    """
+    Transforma el código ISO del EML al vocabulario Dataverse.
+    """
+    codigo = normalizar_texto(valor)
+
+    if not codigo:
+        return None
+
+    equivalencias = cargar_vocabulario_idiomas()
+
+    return equivalencias.get(codigo.lower())
+
 
 # ============================================================
 # 1. FUNCIONES AUXILIARES
@@ -485,6 +558,9 @@ def mapear_identificador_ceiba(identificador):
 
     identificador = str(identificador).strip()
 
+    if not identificador:
+        return []
+
     if identificador.upper() in {
         "NA", "N/A", "NO APLICA"
     }:
@@ -496,7 +572,7 @@ def mapear_identificador_ceiba(identificador):
                 "typeName": "otherIdAgency",
                 "multiple": False,
                 "typeClass": "primitive",
-                "value": "CEIBA"
+                "value": "IPT Ceiba (I2D)"
             },
             "otherIdValue": {
                 "typeName": "otherIdValue",
@@ -511,6 +587,32 @@ def mapear_identificador_ceiba(identificador):
 # ============================================================
 # 7. CONSTRUCCIÓN DEL BLOQUE CITATION INTERMEDIO
 # ============================================================
+
+
+def mapear_fecha_publicacion(valor):
+    """
+    Valida dataset/pubDate para distributionDate.
+
+    Acepta únicamente fechas completas YYYY-MM-DD.
+    No completa fechas parciales ni reemplaza fechas históricas.
+    """
+    import re
+
+    fecha = normalizar_texto(valor)
+
+    if not fecha:
+        return None
+
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha):
+        return None
+
+    try:
+        date.fromisoformat(fecha)
+    except ValueError:
+        return None
+
+    return fecha
+
 
 def construir_citation_intermedio(
     dataset,
@@ -546,6 +648,45 @@ def construir_citation_intermedio(
         citation["title"] = valor_titulo
 
     # --------------------------------------------------------
+    # Título alternativo (EML 2.2.0)
+    # --------------------------------------------------------
+
+    nombre_corto = normalizar_texto(
+        dataset.get("shortName")
+    )
+
+    if nombre_corto:
+        citation["alternativeTitle"] = [nombre_corto]
+
+    # --------------------------------------------------------
+    # Área temática (valor institucional constante)
+    # --------------------------------------------------------
+
+    citation["subject"] = [
+        "Earth and Environmental Sciences"
+    ]
+
+    # --------------------------------------------------------
+    # Idioma (ISO 639-2 -> vocabulario Dataverse)
+    # --------------------------------------------------------
+
+    idioma = mapear_idioma(dataset.get("language"))
+
+    if idioma:
+        citation["language"] = [idioma]
+
+    # --------------------------------------------------------
+    # Fecha histórica de distribución (CEIBA pubDate)
+    # --------------------------------------------------------
+
+    fecha_distribucion = mapear_fecha_publicacion(
+        dataset.get("pubDate")
+    )
+
+    if fecha_distribucion:
+        citation["distributionDate"] = fecha_distribucion
+
+    # --------------------------------------------------------
     # Descripción
     # --------------------------------------------------------
 
@@ -578,6 +719,32 @@ def construir_citation_intermedio(
         citation["keyword"] = (
             palabras_intermedias
         )
+
+    # --------------------------------------------------------
+    # Información adicional (notesText)
+    # --------------------------------------------------------
+
+    additional_info = dataset.get("additionalInfo")
+
+    if isinstance(additional_info, dict):
+        parrafos = additional_info.get("para")
+    else:
+        parrafos = None
+
+    if parrafos is not None:
+        if not isinstance(parrafos, list):
+            parrafos = [parrafos]
+
+        textos = []
+
+        for parrafo in parrafos:
+            texto = normalizar_texto(parrafo)
+
+            if texto:
+                textos.append(texto)
+
+        if textos:
+            citation["notesText"] = "\n".join(textos)
 
     # --------------------------------------------------------
     # Identificador CEIBA

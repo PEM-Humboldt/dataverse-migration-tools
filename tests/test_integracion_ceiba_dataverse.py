@@ -114,7 +114,16 @@ def test_bloque_citation(resultado_dataverse):
 
     assert isinstance(citation["fields"], list)
 
-    assert len(citation["fields"]) == 4
+    assert len(citation["fields"]) == 5
+
+    subject = obtener_campo(
+        resultado_dataverse,
+        "subject",
+    )
+
+    assert subject["typeClass"] == "controlledVocabulary"
+    assert subject["multiple"] is True
+    assert subject["value"] == ["Earth and Environmental Sciences"]
 
 
 def test_titulo(resultado_dataverse):
@@ -211,7 +220,7 @@ def test_identificador_ceiba(resultado_dataverse):
 
     assert (
         identificador["otherIdAgency"]["value"]
-        == "CEIBA"
+        == "IPT Ceiba (I2D)"
     )
 
     assert (
