@@ -83,7 +83,8 @@ def map_sociocultural_inventory(excel_file):
                 'contrato_convenio': row.get('Contrato/Convenio'),
                 'doi': row.get('DOI'),
                 'gbif_key': row.get('GBIF DATASET KEY'),
-                'url': url
+                'url': url,
+                'metadato_privado': row.get('(TEMPORAL) Metadato finalizado pero privado')
             }
 
     incoming_index = map_full_inventory(wb)
