@@ -18,7 +18,7 @@ No incorpora autores ni contactos.
 """
 
 import re
-
+import unicodedata
 
 # ============================================================
 # 1. FUNCIONES AUXILIARES
@@ -226,28 +226,125 @@ def mapear_descripcion(abstract):
 # ============================================================
 # 5. MAPEO DE PALABRAS CLAVE
 # ============================================================
+def separar_tesauro_uri(keyword_thesaurus):
+    """
+    Separa el nombre del tesauro y su URI cuando
+    ambos están documentados en keywordThesaurus.
+
+    No asigna vocabularios a palabras clave.
+    """
+
+    texto = normalizar_texto(keyword_thesaurus)
+
+    if not texto or texto.upper() in {
+        "N/A", "NA", "NO APLICA"
+    }:
+        return "", ""
+
+    coincidencia = re.search(
+        r"https?://[^\s]+",
+        texto
+    )
+
+    if not coincidencia:
+        return texto, ""
+
+    uri = coincidencia.group(0).rstrip(".,;")
+
+    nombre = normalizar_texto(
+        texto[:coincidencia.start()].rstrip(" :")
+    )
+
+    return nombre, uri
+
+def es_palabra_clave_gbif(termino, tesauro):
+    """
+    Identifica términos reconocidos de los vocabularios
+    GBIF de tipo y subtipo de conjunto de datos.
+
+    No modifica keywordValue ni completa coreType/subtype.
+    """
+
+    termino_normalizado = normalizar_texto(termino).lower()
+    tesauro_normalizado = normalizar_texto(tesauro).lower()
+
+    tipos_gbif = {
+        "occurrence",
+        "checklist",
+        "samplingevent",
+        "metadata",
+        "other"
+    }
+
+    subtipos_gbif = {
+        "specimen",
+        "observation",
+        "inventoryregional",
+        "inventorythematic",
+        "derivedfromoccurrence",
+        "taxonomicauthority",
+        "nomenclatorauthority"
+    }
+
+    if tesauro_normalizado == "gbif dataset type vocabulary":
+        return termino_normalizado in tipos_gbif
+
+    if tesauro_normalizado == "gbif dataset subtype vocabulary":
+        return termino_normalizado in subtipos_gbif
+
+    return False
+
+def normalizar_identificador_palabra(valor):
+    """
+    Normaliza una palabra clave exclusivamente para
+    identificar duplicados.
+
+    Ignora mayúsculas, tildes y puntuación.
+    No modifica el valor original publicado.
+    """
+
+    texto = normalizar_texto(valor).lower()
+
+    texto = unicodedata.normalize("NFKD", texto)
+
+    texto = "".join(
+        caracter
+        for caracter in texto
+        if not unicodedata.combining(caracter)
+    )
+
+    texto = "".join(
+        caracter if caracter.isalnum() or caracter.isspace()
+        else " "
+        for caracter in texto
+    )
+
+    return " ".join(texto.split())
+
 
 def mapear_palabras_clave(keyword_sets):
     """
     Transforma las palabras clave EML al formato
-    de Dataverse.
+    intermedio de Dataverse.
 
-    Conserva cada palabra clave y su vocabulario.
+    Conserva los valores originales y los vocabularios
+    reales, evitando duplicados equivalentes.
     """
 
     if isinstance(keyword_sets, dict):
         keyword_sets = [keyword_sets]
 
     palabras_dataverse = []
+    identificadores = set()
 
     for grupo in keyword_sets or []:
 
         if not isinstance(grupo, dict):
             continue
 
-        tesauro = str(
-            grupo.get("keywordThesaurus") or ""
-        ).strip()
+        tesauro, tesauro_uri = separar_tesauro_uri(
+            grupo.get("keywordThesaurus")
+        )
 
         palabras = grupo.get("keyword", [])
 
@@ -256,41 +353,119 @@ def mapear_palabras_clave(keyword_sets):
 
         for palabra in palabras:
 
-            if isinstance(palabra, dict):
-                valor = str(
-                    palabra.get("#text") or ""
-                ).strip()
-
-            elif isinstance(palabra, str):
-                valor = palabra.strip()
-
-            else:
-                continue
+            valor = normalizar_texto(palabra)
 
             if not valor:
                 continue
 
-            palabra_dv = {
-                "keywordValue": {
-                    "typeName": "keywordValue",
-                    "multiple": False,
-                    "typeClass": "primitive",
-                    "value": valor
+            terminos = re.split(r"[,;]", valor)
+
+            for termino in terminos:
+
+                termino = normalizar_texto(termino)
+
+                if not termino:
+                    continue
+
+                identificador = normalizar_identificador_palabra(
+                    termino
+                )
+
+                if not identificador:
+                    continue
+
+                # Determinar si el vocabulario corresponde
+                # realmente a la palabra clave.
+                es_tesauro_gbif = tesauro.lower() in {
+                    "gbif dataset type vocabulary",
+                    "gbif dataset subtype vocabulary",
                 }
-            }
 
-            if tesauro and tesauro.upper() not in {
-                "N/A", "NA", "NO APLICA"
-            }:
+                asignar_tesauro = bool(tesauro)
 
-                palabra_dv["keywordVocabulary"] = {
-                    "typeName": "keywordVocabulary",
-                    "multiple": False,
-                    "typeClass": "primitive",
-                    "value": tesauro
+                if es_tesauro_gbif:
+                    asignar_tesauro = es_palabra_clave_gbif(
+                        termino,
+                        tesauro,
+                    )
+
+                vocabulario = tesauro if asignar_tesauro else ""
+
+                # La comparación utiliza únicamente
+                # vocabularios efectivamente asignados.
+                clave = (
+                    identificador,
+                    vocabulario.lower(),
+                )
+
+                if clave in identificadores:
+                    continue
+
+                clave_sin_tesauro = (
+                    identificador,
+                    "",
+                )
+
+                if vocabulario:
+
+                    # Priorizar la aparición con vocabulario.
+                    if clave_sin_tesauro in identificadores:
+
+                        palabras_dataverse = [
+                            elemento
+                            for elemento in palabras_dataverse
+                            if not (
+                                normalizar_identificador_palabra(
+                                    elemento["keywordValue"]["value"]
+                                ) == identificador
+                                and "keywordVocabulary" not in elemento
+                            )
+                        ]
+
+                        identificadores.discard(
+                            clave_sin_tesauro
+                        )
+
+                else:
+
+                    # No duplicar una palabra libre cuando
+                    # ya existe con un vocabulario real.
+                    existe_con_tesauro = any(
+                        clave_existente[0] == identificador
+                        and clave_existente[1]
+                        for clave_existente in identificadores
+                    )
+
+                    if existe_con_tesauro:
+                        continue
+
+                palabra_dv = {
+                    "keywordValue": {
+                        "typeName": "keywordValue",
+                        "multiple": False,
+                        "typeClass": "primitive",
+                        "value": termino,
+                    }
                 }
 
-            palabras_dataverse.append(palabra_dv)
+                if vocabulario:
+                    palabra_dv["keywordVocabulary"] = {
+                        "typeName": "keywordVocabulary",
+                        "multiple": False,
+                        "typeClass": "primitive",
+                        "value": vocabulario,
+                    }
+
+                if vocabulario and tesauro_uri:
+                    palabra_dv["keywordVocabularyURI"] = {
+                        "typeName": "keywordVocabularyURI",
+                        "multiple": False,
+                        "typeClass": "primitive",
+                        "value": tesauro_uri,
+                    }
+
+                palabras_dataverse.append(palabra_dv)
+                identificadores.add(clave)
 
     return palabras_dataverse
 
