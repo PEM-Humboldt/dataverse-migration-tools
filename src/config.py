@@ -19,5 +19,13 @@ class Config:
         
         self.api_origin = NativeApi(self.dv_origin_url, self.dv_origin_api_token)
 
+        self.dv_target_url = os.getenv('DV_TARGET_URL')
+        self.dv_target_api_token = os.getenv('DV_TARGET_API_TOKEN')
+
         self.ceiba_origin_path = os.getenv('CEIBA_ORIGIN_PATH')
         self.ceiba_data_dir = os.getenv('CEIBA_DATA_DIR')
+        
+        self.gn_origin_url = os.getenv('GN_URL')
+        self.gn_user = os.getenv('GN_USER')
+        self.gn_password = os.getenv('GN_PASSWORD')
+        self.gn_data_dir = os.getenv('GN_DATA_DIR')
