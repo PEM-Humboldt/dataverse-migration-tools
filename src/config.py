@@ -8,6 +8,7 @@ class Config:
 
     def __init__(self):
         self.metadata_dir = os.getenv('METADATA_DIR')
+        self.tsv_files = os.getenv('TSV_FILES_PATH')
         self.files_dir = os.getenv('FILES_DIR')
         self.i2d_inventory = os.getenv('INVENTORY_PATH')
 
@@ -15,8 +16,12 @@ class Config:
         self.dv_origin_api_token = os.getenv('BIOCULTURAL_ORIGIN_API_TOKEN')
         self.dv_data_dir = os.getenv('BIOCULTURAL_DATA_DIR')
         
-        self.api_origin = NativeApi(self.dv_origin_url, self.dv_origin_api_token)
 
+        self.api_origin = (
+            NativeApi(self.dv_origin_url, self.dv_origin_api_token)
+            if self.dv_origin_url
+            else None
+        )
         self.dv_target_url = os.getenv('DV_TARGET_URL')
         self.dv_target_api_token = os.getenv('DV_TARGET_API_TOKEN')
 
