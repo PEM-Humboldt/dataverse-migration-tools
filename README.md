@@ -140,5 +140,27 @@ Los resultados se almacenarán en la ruta `GN_DATA_DIR`:
 
 Las tablas que usa el mapeo (correspondencia, variables de GeoNetwork, roles, organizaciones, personas, equivalencias, créditos, registros excluidos) son tablas revisadas a mano que contienen datos de los registros: nombres de personas, títulos, registros privados. Por eso **no se publican en este repositorio**: cada persona que ejecuta el mapeo las copia en [src/mapeo/geonetwork/tablas](/src/mapeo/geonetwork/tablas), donde git las ignora (regla `*.csv`). Su contenido, sus columnas y de dónde obtenerlas se describen en [tablas/README.md](/src/mapeo/geonetwork/tablas/README.md). El script se detiene si falta alguna. Un cambio de regla se hace en ellas o en las funciones de `src/mapeo/geonetwork/`.
 
+### Ceiba
+Para convertir la ingesta de Ceiba en registros de versión de Dataverse ejecute el script [ceiba_metadata_mapping.py](/src/mapeo/ceiba_metadata_mapping.py) después de la ingesta:
+```sh
+python3 -m src.mapeo.ceiba_metadata_mapping
+```
+
+El script lee la ingesta (`CEIBA_DATA_DIR`: `resource_metadata.json` de cada recurso e `inventory.csv`) y el inventario de la I2D (`INVENTORY_PATH`, hoja `Proyectos Macro`), aplica la tabla de correspondencia de Ceiba y comprueba cada registro frente a las definiciones de los bloques de metadatos (`TSV_FILES_PATH`, leídas por `load_dv_schemas()`). Solo se migra la última versión publicada de cada recurso, como versión 1.0; los recursos nunca publicados no se migran. Las funciones están en [src/mapeo/ceiba/](/src/mapeo/ceiba): lectura de la ingesta (`ceiba_source.py`), personas y organizaciones (`ceiba_people.py`), campos de los cinco bloques (`ceiba_fields.py`) y archivos de datos (`ceiba_files.py`). La comprobación frente a los bloques y la construcción de los registros de versión usan los módulos de GeoNetwork (`src/mapeo/geonetwork/dataverse_check.py`, `dataverse_payload.py`).
+
+Con la opción `--with-files`, el script copia también los archivos de datos del Darwin Core Archive de la última versión, como archivos de texto `.tsv` o `.csv` (los que Dataverse ingiere como tabulares), en `CEIBA_DATA_DIR/FILES_DIR/<recurso>-1.0/`:
+```sh
+python3 -m src.mapeo.ceiba_metadata_mapping --with-files
+```
+
+Los resultados se almacenarán en la ruta `CEIBA_DATA_DIR`:
+- Carpeta `raw` (`METADATA_DIR`): un JSON por recurso migrado, nombrado como [recurso]-1.0.json, con la forma `{"metadataLanguage", "datasetVersion", "inventory_data"}`; con `--with-files`, `datasetVersion.files` describe los archivos de datos.
+- `load_plan.csv`: una fila por registro: versión del IPT migrada, archivo de versión, si se publica después de la carga (`release` = `no` para los recursos privados del IPT, que se cargan como borradores), tipo de acceso y licencia; con `--with-files`, número de archivos, archivos restringidos y carpeta de los archivos.
+- `version_dates.csv`: las fechas originales de la versión 1.0 de cada conjunto de datos (creación, primera publicación y última edición en Ceiba), para restituirlas después de la carga; columnas informativas para comparar (versión migrada, `pubDate`, año de la cita) y una fecha sugerida cuando el historial del IPT no tiene la primera versión. Las filas de los borradores (`draft` = `True`) no se aplican.
+- `curation.csv`: los valores que el mapeo deja fuera o completa con un valor de respaldo, uno por fila (`resource`, `kind`, `field`, `value`, `note`), para la fase de curación después de la carga.
+- `mapping_problems.json`: los registros que no pasan la comprobación frente a los bloques; no reciben registro de versión.
+
+Las tablas que usa el mapeo (roles de personas, equivalencias de vocabularios, razones de restricción, autores de las citas) son tablas revisadas a mano que contienen datos de los recursos: nombres de personas y de convenios. Por eso **no se publican en este repositorio**: cada persona que ejecuta el mapeo las copia en [src/mapeo/ceiba/tablas](/src/mapeo/ceiba/tablas), donde git las ignora (regla `*.csv`). Su contenido, sus columnas y de dónde obtenerlas se describen en [tablas/README.md](/src/mapeo/ceiba/tablas/README.md). El script se detiene si falta alguna. Los autores se leen de `citation_authors.csv`: si se añaden recursos a Ceiba antes de la migración final, hay que añadir sus filas a esa tabla.
+
 ## Logs
 Podrá encontrar los archivos de logs en la carpeta [logs](/src/logs/).
