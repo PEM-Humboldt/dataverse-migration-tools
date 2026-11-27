@@ -1,6 +1,6 @@
 # Validación parcial del mapeo CEIBA–Dataverse
 
-Este informe acompaña el Draft Pull Request de `feature/validacion-ceiba-mapping` a `marbotte/ceiba-mapping-example`. Presenta la evidencia disponible al 26 de noviembre de 2026, las correcciones aplicadas y las decisiones pendientes para continuar la validación.
+Este informe acompaña el Draft Pull Request de `feature/validacion-ceiba-mapping` a `marbotte/ceiba-mapping-example`. Consolida la evaluación inicial y la validación posterior del bloque `geospatial`, con sus resultados y decisiones pendientes.
 
 ## Índice
 
@@ -9,14 +9,15 @@ Este informe acompaña el Draft Pull Request de `feature/validacion-ceiba-mappin
 3. [Metodología](#metodología)
 4. [Caracterización de los datos](#caracterización-de-los-datos)
 5. [Resultados de citation](#resultados-de-citation)
-6. [Personas e instituciones](#personas-e-instituciones)
-7. [Correcciones implementadas](#correcciones-implementadas)
-8. [Regresión y reporte de curación](#regresión-y-reporte-de-curación)
-9. [Pruebas unitarias](#pruebas-unitarias)
-10. [Herramienta de comparación de regresiones](#herramienta-de-comparación-de-regresiones)
-11. [Matriz de hallazgos pendientes](#matriz-de-hallazgos-pendientes)
-12. [Preguntas para Marius y el equipo](#preguntas-para-marius-y-el-equipo)
-13. [Próximas actividades](#próximas-actividades)
+6. [Resultados de geospatial](#resultados-de-geospatial)
+7. [Personas e instituciones](#personas-e-instituciones)
+8. [Correcciones implementadas](#correcciones-implementadas)
+9. [Regresión y reporte de curación](#regresión-y-reporte-de-curación)
+10. [Pruebas unitarias](#pruebas-unitarias)
+11. [Herramienta de comparación de regresiones](#herramienta-de-comparación-de-regresiones)
+12. [Matriz de hallazgos pendientes](#matriz-de-hallazgos-pendientes)
+13. [Preguntas para Marius y el equipo](#preguntas-para-marius-y-el-equipo)
+14. [Próximas actividades](#próximas-actividades)
 
 ## Contexto y alcance
 
@@ -25,14 +26,16 @@ Este informe acompaña el Draft Pull Request de `feature/validacion-ceiba-mappin
 | Repositorio | `PEM-Humboldt/dataverse-migration-tools` |
 | Rama de trabajo | `feature/validacion-ceiba-mapping` |
 | Rama base | `marbotte/ceiba-mapping-example` |
+| Draft Pull Request | [#13](https://github.com/PEM-Humboldt/dataverse-migration-tools/pull/13) |
 | Commit base | `449385271f8efd92894ba70785e95c2bead70ecd` |
 | Commit de los esquemas Dataverse | `ab2841405a24f149ff7fdb6264f179ede27c6e7c` |
 | Crosswalk de referencia | `MigracionCeiba_20261125.xlsx` |
-| Fecha de corte | 26 de noviembre de 2026 |
+| Fecha de corte de la evaluación inicial | 26 de noviembre de 2026 |
+| Actualización de la documentación geográfica | 27 de noviembre de 2026 |
 
-La evaluación fortalece la implementación desarrollada por Marius y conserva su arquitectura. Cubre el bloque `citation` y los elementos relacionados con personas, instituciones y contratistas. Quedan pendientes las evaluaciones específicas de `geospatial`, los elementos restantes de `institutional`, `externalReferences` y `biologicalMetadata`. El alcance se limita a la entrega parcial y no se ha realizado carga de datos en Dataverse.
+La evaluación fortalece la implementación desarrollada por Marius y conserva su arquitectura. Cubre los bloques `citation` y `geospatial` y los elementos relacionados con personas, instituciones y contratistas. La validación funcional de `geospatial` se completó para las reglas actuales. Quedan pendientes la revisión de los indicadores de coherencia geográfica y las evaluaciones de los elementos restantes de `institutional`, `externalReferences` y `biologicalMetadata`. El alcance se limita a la entrega parcial y no se ha realizado carga de datos en Dataverse.
 
-Los resultados cuantitativos proceden de las evaluaciones suministradas para esta fase. La FASE 11 consistió en una auditoría estática de solo lectura. Las cifras de pytest corresponden a la última ejecución informada, anterior a esa auditoría.
+Los resultados cuantitativos proceden de las evaluaciones informadas. La FASE 11 consistió en una auditoría estática de solo lectura. Las cifras de pytest corresponden a las ejecuciones de pruebas sintéticas descritas en la sección de pruebas unitarias.
 
 ## Arquitectura evaluada
 
@@ -127,6 +130,123 @@ No se identificó pérdida de contenido textual. **DESC-H01** registra la pérdi
 | Valores de `keywordVocabularyURI` después de la corrección | 2056 |
 
 **KW-001** incorporó `nomenclator authority` y `ejemplar`, dos términos del vocabulario oficial de subtipo GBIF ausentes del conjunto utilizado por el mapeador. Se conservaron las entradas previas. La regresión dejó 1105 JSON idénticos y modificó 2, con 2 valores adicionales de `keywordVocabulary` y 2 de `keywordVocabularyURI`. Los demás elementos y los reportes permanecieron idénticos en esa comparación.
+
+## Resultados de geospatial
+
+### Alcance del crosswalk y reglas de mapeo
+
+Se evaluaron las filas 67 a 79 del crosswalk actualizado el 25 de noviembre de 2026. Cinco elementos tienen fuente directa bajo `dataset/coverage/geographicCoverage`.
+
+| Elemento de destino | Elemento EML relativo a la cobertura |
+|---|---|
+| `geographicCoverageDescription` | `geographicDescription` |
+| `westLongitude` | `boundingCoordinates/westBoundingCoordinate` |
+| `eastLongitude` | `boundingCoordinates/eastBoundingCoordinate` |
+| `northLatitude` | `boundingCoordinates/northBoundingCoordinate` |
+| `southLatitude` | `boundingCoordinates/southBoundingCoordinate` |
+
+`map_geospatial()` asigna los cuatro lados de `geographicBoundingBox` por nombre del elemento EML, con independencia del orden de aparición y de las descripciones traducidas del esquema. `box_problem()` comprueba que los cuatro valores sean numéricos, se encuentren dentro de los límites globales y cumplan oeste < este y sur < norte. El mapeo conserva las coordenadas aceptadas y excluye los rectángulos rechazados de los JSON finales. [Mapeo CEIBA](../src/mapeo/ceiba/ceiba_fields.py) · [Validación de rectángulos](../src/mapeo/geonetwork/gn_mapping.py)
+
+Ocho elementos carecen de fuente definida en la migración actual. Son `country`, `state`, `city`, `otherGeographicCoverage`, `geographicUnit`, `minimumAltitude`, `maximumAltitude` y `wkt`. La regla vigente descarta la derivación automática de divisiones administrativas, altitudes y geometrías WKT.
+
+### Caracterización de las coberturas originales
+
+La evaluación abarcó los 1107 recursos publicados de la población caracterizada arriba, con 1032 registros EML 2.1.1 y 75 EML 2.2.0.
+
+| Indicador | Cantidad |
+|---|---:|
+| Coberturas geográficas | 1107 |
+| Descripciones no vacías | 1107 |
+| Caracteres normalizados en las descripciones | 305287 |
+| Rectángulos completos | 1107 |
+| Rectángulos con coordenadas numéricas y finitas | 1107 |
+| Rectángulos aceptados por las reglas actuales | 1070 |
+| Rectángulos rechazados | 37 |
+| Rectángulos completamente vacíos | 0 |
+| Coordenadas fuera de los límites globales | 0 |
+| Coberturas con altitudes | 0 |
+
+Cada recurso tenía una sola cobertura geográfica.
+
+| Geometría rechazada | Motivo registrado en curación | Cantidad |
+|---|---|---:|
+| Punto | `oeste ≥ este; sur ≥ norte` | 26 |
+| Ancho cero y altura positiva | `oeste ≥ este` | 7 |
+| Alto cero y ancho positivo | `sur ≥ norte` | 3 |
+| Inversión real de longitud | `oeste ≥ este` | 1 |
+| **Total** | | **37** |
+
+Por motivo registrado, hubo 26 casos con ambas condiciones, ocho con `oeste ≥ este` y tres con `sur ≥ norte`. Los comparadores incluyen tanto la igualdad como la inversión. En 36 casos se observó igualdad entre lados en uno o ambos ejes. Estas coberturas puntuales o lineales pueden representar geometrías legítimas de origen y su tratamiento queda pendiente de concertación.
+
+### Validación EML → ingesta
+
+| Indicador | Resultado |
+|---|---:|
+| Recursos evaluados | 1107 |
+| Coberturas en XML y en JSON de ingesta, por etapa | 1107 |
+| Rectángulos en XML y en JSON de ingesta, por etapa | 1107 |
+| Comparaciones por cada uno de los cinco elementos | 1107 |
+| Comparaciones totales | 5535 |
+| Coincidencias | 5535 |
+| Diferencias | 0 |
+| Recursos afectados por diferencias | 0 |
+| Caracteres normalizados de las descripciones, por etapa | 305287 |
+
+El cotejo no identificó pérdida de información en los cinco elementos durante la ingesta.
+
+### Validación ingesta → JSON final de Dataverse
+
+| Verificación | Resultado |
+|---|---:|
+| Descripciones geográficas conservadas y transformadas a HTML | 1107 |
+| Rectángulos aceptados y conservados exactamente | 1070 |
+| Coordenadas individuales conservadas en los rectángulos aceptados | 4280 |
+| Rectángulos rechazados correctamente omitidos | 37 |
+| Verificaciones de ausencia de los ocho elementos sin fuente | 8856 |
+| Verificaciones de ausencia de los compuestos `geographicCoverage` y `altitudeRange` | 2214 |
+| **Comparaciones totales** | **17564** |
+
+Las 17564 comparaciones fueron correctas, con cero diferencias. Los 305287 caracteres de las descripciones se conservaron tras normalizar el contenido textual del HTML. La presentación visual quedó fuera del cotejo. Se verificó que el JSON final no incluyera ninguno de los 37 rectángulos rechazados.
+
+### Validación de curación y balance del bloque
+
+Se cotejaron las filas de tipo `bounding_box` por identificador del recurso, campo `geographicBoundingBox`, motivo y concordancia con los cuatro valores originales de las coordenadas.
+
+| Resultado del cotejo de curación | Filas |
+|---|---:|
+| Esperadas | 37 |
+| Observadas | 37 |
+| Coincidencias completas | 37 |
+| Faltantes | 0 |
+| Inesperadas | 0 |
+
+El balance suma **23136 verificaciones sin diferencias**. Incluye 5535 verificaciones EML → ingesta, 17564 ingesta → JSON final y 37 cotejos completos de filas de curación. El total acumula pasos de verificación sobre los mismos recursos, incluidos cotejos de rectángulos completos y de sus lados individuales.
+
+### Evaluación complementaria de coherencia geográfica
+
+Se empleó una referencia rectangular aproximada para Colombia, con latitudes de −4,5 a 13,5 y longitudes de −82 a −66. La referencia sirve exclusivamente para formular hipótesis de revisión. El mapeo conserva sus reglas de aceptación globales y la referencia carece de valor como frontera oficial.
+
+| Relación con la referencia | Rectángulos aceptados |
+|---|---:|
+| Completamente dentro | 973 |
+| Intersectan sin estar completamente contenidos | 93 |
+| Fuera | 4 |
+| **Total** | **1070** |
+
+El indicador de contención de la referencia completa se cumple en 26 rectángulos. Se superpone con la clasificación anterior. De los cuatro rectángulos fuera de la referencia, uno menciona Colombia en la descripción.
+
+| Indicador sobre longitudes y ejes | Recursos |
+|---|---:|
+| Con longitudes positivas | 20 |
+| Con oeste negativo y este positivo | 18 |
+| Con ambas longitudes positivas | 2 |
+| Con longitudes positivas y mención de Colombia | 5 |
+| Con longitudes positivas sin mención de Colombia | 15 |
+| Compatibles con la referencia mediante la heurística de cambio de signo aplicada | 0 |
+| Con posible intercambio de latitud y longitud | 1 |
+| **Recursos únicos entre longitudes positivas y posible intercambio** | **20** |
+
+La descripción del posible intercambio menciona Colombia y el caso pertenece al grupo con longitudes positivas. Entre las 26 coberturas puntuales, 25 están dentro de la referencia y una está fuera. Ninguna coincide con el origen (0, 0). Los indicadores señalan casos para revisión. Su confirmación requiere un cotejo individual con la cobertura real, que aún no se ha realizado.
 
 ## Personas e instituciones
 
@@ -267,9 +387,55 @@ Los cambios de metadatos se limitaron a `institutional`. Los reportes `load_plan
 
 Las filas de curación hacen trazables decisiones pendientes, valores de respaldo y casos que requieren revisión. El total de filas mide la carga de revisión y no equivale a un conteo de errores de implementación. La cantidad de filas puede exceder la de recursos únicos porque un recurso puede requerir más de una revisión.
 
+### Integridad de la línea base usada para geospatial
+
+Se verificó el conjunto de archivos de la línea base posterior a PER-H16 y PER-H28 contra su manifiesto.
+
+| Indicador | Resultado |
+|---|---:|
+| JSON de metadatos | 1107 |
+| Reportes de migración | 4 |
+| Archivos registrados | 1111 |
+| Archivos encontrados | 1111 |
+| Huellas SHA-256 coincidentes | 1111 |
+| Huellas diferentes | 0 |
+| Archivos faltantes | 0 |
+| Archivos no registrados | 0 |
+| Registros inesperados | 0 |
+
+El SHA-256 de `src/mapeo/ceiba/ceiba_fields.py` es `dc09979bd912208a3aefc50c34df0242d8cf2c26f7f21079e5d073aade5ce99f` y coincide con el consignado en el manifiesto. El commit `449385271f8efd92894ba70785e95c2bead70ecd` registrado en el manifiesto corresponde al estado anterior a la publicación de las correcciones. La huella identifica el contenido del mapeador empleado para la línea base posterior a las correcciones.
+
+Esta verificación acredita la integridad de los artefactos existentes frente a su manifiesto. La validación geográfica conservó el código de producción, por lo que se utilizaron esos artefactos sin ejecutar nuevamente la ingesta ni el mapeo completo. Una regresión por regeneración requeriría producir otra salida y compararla con la línea base.
+
 ## Pruebas unitarias
 
-La última ejecución informada en macOS con Python 3.13.2 abarcó doce suites seleccionadas. El resultado fue de **230 casos ejecutados, 228 aprobados, 2 `xfail` estrictos y 0 fallos inesperados**. Los `xfail` corresponden a DESC-H01 y NOTE-H02. Esta selección representa el conjunto adaptado; los módulos heredados pendientes quedaron fuera.
+### Suite geográfica
+
+La suite ejecutada de forma aislada contiene **11 funciones de prueba y 43 casos**, incluidas las parametrizaciones. Se aprobaron los 43 casos, sin fallos, omisiones ni nuevos `xfail`. [`tests/test_ceiba_geospatial.py`](../tests/test_ceiba_geospatial.py)
+
+- Descripciones simples y múltiples, omisión de valores vacíos, escape HTML y conservación del orden, incluso al rechazar un rectángulo.
+- Asignación de los cuatro lados, coordenadas negativas, positivas, mixtas y cero, límites globales y conservación de los valores originales.
+- Coordenadas incompletas, no numéricas, fuera de rango, `NaN` e infinitos, inversiones y rectángulos puntuales o lineales.
+- Contenido y motivo de las filas de curación, con una fila por rectángulo rechazado con lados informados. Los casos sintéticos de rectángulos completamente vacíos se omiten sin curación.
+- Coberturas múltiples con rectángulos válidos e inválidos, ausencia de información geográfica y ausencia de elementos sin fuente.
+
+Los casos sintéticos ejercitan `box_problem()` a través de `map_geospatial()`. La suite verifica la transformación en memoria y las filas de curación. Una carga efectiva en Dataverse queda fuera de su alcance.
+
+### Regresión acumulada de la selección
+
+La ejecución previa a la incorporación de la suite geográfica abarcó doce archivos, con 230 casos ejecutados, 228 aprobados, 2 `xfail` estrictos y 0 fallos inesperados. La ejecución acumulada informada se realizó en macOS con Python 3.13.2 y pytest 9.2.0.
+
+| Indicador | Resultado acumulado |
+|---|---:|
+| Archivos de pruebas seleccionados | 13 |
+| Funciones de prueba | 131 |
+| Casos ejecutados | 273 |
+| Aprobados | 271 |
+| `xfail` estrictos | 2 |
+| Fallos inesperados | 0 |
+| Tiempo observado | 1,31 s |
+
+Los dos `xfail` corresponden a DESC-H01 y NOTE-H02. La selección cubre las suites adaptadas y deja fuera los módulos heredados pendientes.
 
 `pytest` requiere instalación adicional a las dependencias declaradas del proyecto. Se recomienda ejecutar la selección en un proceso dedicado, dado que las fixtures aíslan dependencias de importación para estas pruebas. El comparador requiere Python 3.10 o posterior. La ejecución informada sólo acredita el entorno macOS indicado.
 
@@ -290,6 +456,7 @@ tests/test_compare_ceiba_mapping.py \
 tests/test_ceiba_people.py \
 tests/test_ceiba_contractors.py \
 tests/test_ceiba_people_curation.py \
+tests/test_ceiba_geospatial.py \
 -v --tb=short -p no:cacheprovider
 ```
 
@@ -340,6 +507,22 @@ La prioridad es una propuesta para organizar la revisión. **Alta** identifica d
 | PER-H38 | Hay diferencias de afiliación entre apariciones deduplicadas. | 36 conflictos. | La primera aparición puede conservar una afiliación distinta de otra fuente. | Media | Confirmado, revisión semántica pendiente. | Acordar si se mantiene la precedencia o se envían los conflictos a curación. |
 | PER-H39 | Hay diferencias de correo entre apariciones deduplicadas. | 2 conflictos. Uno coincide con un conflicto de afiliación. | Puede prevalecer un correo distinto del que corresponda usar. | Media | Confirmado, revisión semántica pendiente. | Revisar las fuentes y acordar precedencia o curación. |
 
+### Hallazgos geográficos
+
+Los hallazgos geográficos pueden corresponder al mismo recurso. Sus cantidades no se suman para estimar recursos únicos afectados.
+
+| ID | Descripción | Evidencia | Impacto | Prioridad | Estado | Recomendación |
+|---|---|---|---|---|---|---|
+| GEO-H01 | Se omiten los rectángulos completamente vacíos sin fila de curación. | Comportamiento confirmado en pruebas sintéticas. 0 casos en los recursos evaluados. | Una cobertura futura sin ningún lado informado quedaría sin fila de curación. | Baja | Confirmado con evidencia sintética, sin impacto observado. | Mantener el comportamiento actual sin modificación inmediata. |
+| GEO-H02 | Hay rectángulos aceptados con longitudes positivas. | 20 rectángulos. En 18 casos la longitud oeste es negativa y en 2 ambas longitudes son positivas. | La longitud positiva indica un caso para revisión y por sí sola es compatible con una cobertura legítima. | Media | Indicador diagnóstico, pendiente de revisión individual. | Revisar la coherencia geográfica y concertar indicadores adicionales de curación. |
+| GEO-H03 | Las descripciones de varias coberturas se consolidan en párrafos HTML. | Orden y consolidación verificados en pruebas sintéticas. 0 recursos evaluados con varias coberturas. | El comportamiento conserva varias descripciones en un único campo cuando aparecen. | Baja | Confirmado con evidencia sintética. | Mantener la cobertura sintética y revisar el formato junto con GEO-H06. |
+| GEO-H04 | Se identificó una inversión real de longitud. | 1 rectángulo con oeste > este, omitido del JSON final y registrado en curación. | El rectángulo rechazado queda disponible para revisión de origen. | Baja | Confirmado, tratamiento vigente verificado. | Mantener la regla de rechazo y curación. |
+| GEO-H05 | Hay rectángulos de área cero. | 36 rectángulos, con 26 puntos, 7 de ancho cero y 3 de alto cero. Todos figuran en curación. | El JSON final omite coberturas que pueden representar puntos o líneas legítimos. | Media | Confirmado, tratamiento definitivo pendiente. | Concertar el tratamiento de coberturas puntuales y lineales. |
+| GEO-H06 | Las descripciones geográficas se transforman a HTML. | 1107 descripciones transformadas y 305287 caracteres normalizados conservados. | La representación visual depende del formato elegido para el campo. | Media | Conservación textual confirmada, formato pendiente de concertación. | Acordar el formato definitivo de `geographicCoverageDescription`. |
+| GEO-H07 | Un rectángulo aceptado es compatible con un posible intercambio de latitud y longitud. | 1 recurso con mención de Colombia y longitudes positivas. La geometría es consistente con la hipótesis de intercambio. | El intercambio, si se confirma, alteraría la ubicación asignada a la cobertura. | Alta | Hipótesis diagnóstica, pendiente de revisión individual. | Revisar la fuente y el alcance del recurso, conservando las coordenadas originales durante la revisión. |
+| GEO-H08 | Hay rectángulos aceptados fuera de la referencia aproximada de Colombia. | 4 rectángulos fuera de la referencia. 1 menciona Colombia. | Puede haber una discrepancia entre la cobertura y lo que declara la descripción. | Media | Indicador diagnóstico, pendiente de revisión individual. | Evaluar la coherencia con la cobertura real de los recursos. |
+| GEO-H09 | Una cobertura puntual queda fuera de la referencia aproximada de Colombia. | 1 de 26 puntos evaluados. Ya figura en curación por área cero. | La ubicación del punto puede revisarse en la fila existente. | Baja | Indicador diagnóstico sobre un caso ya registrado en curación. | Revisar junto con el tratamiento de coberturas puntuales. |
+
 ### Hallazgos de auditoría previa a publicación
 
 | ID | Descripción | Evidencia | Impacto | Prioridad | Estado | Recomendación |
@@ -372,12 +555,17 @@ La prioridad es una propuesta para organizar la revisión. **Alta** identifica d
 13. ¿Cómo se realizará la conservación externa de las unidades curatoriales? Se identificaron 42 recursos con `jgtiCuratorialUnit` y queda pendiente verificar el tratamiento completo.
 14. ¿Se deben fortalecer los controles del comparador antes de utilizarlo como criterio automático de aceptación? La auditoría detectó casos de entradas incompletas y riesgos de exposición de reportes.
 15. ¿Conviene declarar dependencias de desarrollo y mejorar el aislamiento de las fixtures? `pytest` requiere instalación adicional y la selección actual se recomienda en un proceso dedicado.
+16. ¿Cuál debe ser el tratamiento definitivo de las coberturas puntuales y lineales que generan rectángulos de área cero? ¿Se mantienen exclusivamente en curación o existe una representación alternativa compatible con Dataverse? La evaluación identificó 36 casos ya registrados en curación.
+17. ¿Conviene incorporar indicadores de coherencia geográfica para detectar longitudes positivas, posibles intercambios de coordenadas y coberturas incompatibles con su descripción, sin modificar automáticamente los valores originales? Los indicadores identificaron 20 recursos únicos entre longitudes positivas y posible intercambio. También se observaron cuatro rectángulos aceptados fuera de la referencia aproximada.
+18. ¿Se mantiene la representación HTML de `geographicCoverageDescription` o se prefiere texto plano, en concordancia con la decisión sobre el formato de `dsDescriptionValue`? Las 1107 descripciones geográficas conservan el contenido textual normalizado en el formato actual.
+19. ¿Se deben incorporar al reporte de curación los rectángulos explícitamente presentes en EML pero completamente vacíos, diferenciándolos de las coberturas que no incluyen boundingCoordinates? Este comportamiento se identificó mediante pruebas sintéticas, sin casos observados en los 1107 recursos evaluados (GEO-H01).
+20. ¿Se confirma que country, state, city, otherGeographicCoverage, geographicUnit, minimumAltitude, maximumAltitude y wkt deben permanecer sin diligenciar durante la migración inicial, dejando su eventual incorporación para una etapa posterior de curación o enriquecimiento de metadatos?
 
 Estas preguntas quedan abiertas para concertación. Las recomendaciones de la matriz orientan la revisión y no constituyen autorizaciones de cambio.
 
 ## Próximas actividades
 
-1. Validar `geospatial`.
+1. Revisar los casos geográficos señalados por los indicadores y concertar el tratamiento de las coberturas puntuales y lineales y el formato de las descripciones.
 2. Validar los elementos restantes de `institutional`.
 3. Validar `externalReferences`.
 4. Validar `biologicalMetadata`.
