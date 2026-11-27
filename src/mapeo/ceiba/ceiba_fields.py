@@ -13,6 +13,7 @@ the source is left to the curation phase, and is written to the curation lists (
 """
 import csv
 import re
+from datetime import date
 from pathlib import Path
 
 from src.mapeo.ceiba.ceiba_people import authors_index, eml_contractors, map_authors, map_parties, norm_key
@@ -73,15 +74,23 @@ def vocabulary_identifiers(tsv_dir):
 
 
 def iso_date(value):
-    # Compared with feature/integracion-ceiba-dataverse-v2 (commit bbdd77d, src/mapeo/ceiba_mapping.py, mapear_fecha_publicacion()):
-    # also accepts YYYY and YYYY-MM, which Dataverse 6.10 accepts in a date field (Admin Guide, Metadata
-    # Customization, fieldType date); keeping only YYYY-MM-DD leaves out the year-only pubDate.
-    """Date as YYYY, YYYY-MM or YYYY-MM-DD (the three forms Dataverse 6.10 accepts for a date field; the time of
-    a date-time is dropped), or None when it is not a date (it is then left out and listed for curation)."""
-    m = DATE.match(value or "")
-    if not m:
+    """Devuelve una fecha válida como AAAA, AAAA-MM o AAAA-MM-DD, o None.
+
+    Conserva la precisión original y descarta la hora y la zona sin convertir a UTC.
+    """
+    if not isinstance(value, str):
         return None
-    return "-".join(p for p in m.groups() if p)
+    match = DATE.match(value)
+    if not match:
+        return None
+
+    year, month, day = match.groups()
+    try:
+        # Completar con 1 solo para validar, conservando la precisión al devolver la fecha.
+        date(int(year), int(month or "1"), int(day or "1"))
+    except ValueError:
+        return None
+    return "-".join(part for part in (year, month, day) if part is not None)
 
 
 def textbox(paras):
@@ -98,6 +107,7 @@ GBIF_TYPE_VALUES = {"occurrence", "checklist", "metadata", "samplingevent", "oth
 GBIF_SUBTYPE_VALUES = {"specimen", "observation", "inventoryregional", "inventorythematic",
                        "derivedfromoccurrence", "taxonomicauthority", "nomenclatorauthority", "generalinventory",
                        "citation", "other", "especimen", "observacion", "inventario regional",
+                       "nomenclator authority", "ejemplar",
                        "inventario tematico", "derivado de registros biologicos"}
 GBIF_VOCABULARIES = {"gbif_type": ("GBIF Dataset Type Vocabulary", GBIF_TYPE_VALUES),
                      "gbif_subtype": ("GBIF Dataset Subtype Vocabulary", GBIF_SUBTYPE_VALUES)}
@@ -571,6 +581,22 @@ def split_cell(value):
     return [clean(v) for v in re.split(r"[|;]", str(value or "")) if clean(v) and norm_key(v) not in FILLERS | {"p"}]
 
 
+def _split_inventory_contracts(value):
+    """Separa códigos de prestación de servicios y valores residuales del inventario.
+
+    Un tramo con comas se separa sólo si todos sus fragmentos son códigos completos.
+    Se admite el prefijo redundante PS antes de un código válido.
+    """
+    codes, residual = [], []
+    for entry in split_cell(value):
+        candidates = [part.strip().removeprefix("PS ") for part in entry.split(",")]
+        if all(PS_CODE.fullmatch(code) for code in candidates):
+            codes.extend(candidates)
+        else:
+            residual.append(entry)
+    return codes, residual
+
+
 def map_projects(record, macro_index, curation):
     """institutional/project: two separate entries, never merged (Marius, 10/11/2026).
 
@@ -611,7 +637,7 @@ def map_projects(record, macro_index, curation):
         if entry:
             entries.append(entry)
     biologico = (record["inventory"] or {}).get("biologico") or {}
-    cell = [c for c in split_cell(biologico.get("contrato_convenio")) if not PS_CODE.fullmatch(c)]
+    _, cell = _split_inventory_contracts(biologico.get("contrato_convenio"))
     agreements = [c for c in cell if not OTHER_CONTRACT.search(c)]
     eml_funding = re.sub(r"\s", "", " ".join(paragraphs(project.get("funding")) if project else [])).upper()
     for code in cell:
@@ -638,16 +664,20 @@ def same_name(a, b):
     return len(shorter) >= 2 and (words_a <= words_b or words_b <= words_a) or words_a == words_b
 
 
-def map_contractors(record):
+def map_contractors(record, curation=None):
     """institutional/contractor: service-contract codes (EML funding text + inventory Contrato/Convenio) and
     contractors (EML persons whose position says «contratista» + inventory Contratista if not one of them).
-    One contractor and one code → one entry; otherwise names and codes in separate entries (curation)."""
+    One contractor and one code → one entry; otherwise names and codes in separate entries (curation).
+
+    Si se proporciona la lista de curación, registra una fila por asociación indeterminada.
+    """
     dataset = record["dataset"]
     project = dataset.get("project") if isinstance(dataset.get("project"), dict) else {}
     biologico = (record["inventory"] or {}).get("biologico") or {}
+    funding_codes = [m.group(0) for p in paragraphs(project.get("funding")) for m in PS_CODE.finditer(p)]
+    inventory_codes, _ = _split_inventory_contracts(biologico.get("contrato_convenio"))
     codes = []
-    for found in [m.group(0) for p in paragraphs(project.get("funding")) for m in PS_CODE.finditer(p)] + \
-            [c for c in split_cell(biologico.get("contrato_convenio")) if PS_CODE.fullmatch(c)]:
+    for found in funding_codes + inventory_codes:
         code = re.sub(r"\s", "", found).upper()
         if code not in codes:
             codes.append(code)
@@ -657,6 +687,16 @@ def map_contractors(record):
         names.append(contractor)
     if len(names) == 1 and len(codes) == 1:
         return [{"contractCode": codes[0], "contractorName": names[0]}]
+    if curation is not None and names and codes:
+        name_label = "nombre" if len(names) == 1 else "nombres"
+        code_label = "código" if len(codes) == 1 else "códigos"
+        curation.append({
+            "resource": record["name"],
+            "kind": "contractor_association",
+            "field": "contractor",
+            "value": f"{len(names)} {name_label}; {len(codes)} {code_label}",
+            "note": "No se puede establecer una correspondencia inequívoca entre nombres y códigos. Se requiere revisión.",
+        })
     return [{"contractCode": c} for c in codes] + [{"contractorName": n} for n in names]
 
 
@@ -702,7 +742,7 @@ def map_institutional(record, tables, macro_index, curation):
     projects = map_projects(record, macro_index, curation)
     if projects:
         fields["project"] = projects
-    contractors = map_contractors(record)
+    contractors = map_contractors(record, curation)
     if contractors:
         fields["contractor"] = contractors
     acknowledgement = textbox(paragraphs(record["dataset"].get("acknowledgements")))
