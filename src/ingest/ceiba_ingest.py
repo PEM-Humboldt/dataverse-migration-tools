@@ -6,7 +6,7 @@ from src.ingest.utilitarios.xml_to_dict import xml_to_dict_tree
 from src.formato.utilitarios.map_inventory import attach_inventory_data
 from src.config import Config
 from src.utilitarios.files import write_csv, write_json
-from src.formato.ceiba_format import map_biologico_inventory
+from src.formato.ceiba_format import map_biologico_inventory, resolve_ceiba_inventory
 from src.utilitarios.logger import logger
 
 config = Config()
@@ -114,14 +114,22 @@ def main():
     successes = 0
     fails = 0
 
-    full_index = map_biologico_inventory(config.i2d_inventory)
+    biological_identifiers = []
+    full_index = map_biologico_inventory(config.i2d_inventory, biological_identifiers=biological_identifiers)
+    ceiba_index, counts = resolve_ceiba_inventory(full_index, (r.name for r in resources), biological_identifiers)
+    logger.info(
+        "Inventario biológico CEIBA: coincidencias exactas=%d, normalizadas recuperadas=%d, "
+        "sin correspondencia=%d, rechazos por ambigüedad en el inventario=%d y en CEIBA=%d.",
+        counts["exact"], counts["normalized"], counts["missing"],
+        counts["ambiguous_inventory"], counts["ambiguous_ceiba"],
+    )
 
     inventory_mapping = []
     for r in resources:
         try:
             data = process_metadata(r)
 
-            full_dict = attach_inventory_data(full_index, data['ceiba_identifier'], 'biologico', data['resource_dict'])
+            full_dict = attach_inventory_data(ceiba_index, data['ceiba_identifier'], 'biologico', data['resource_dict'])
             write_json(full_dict, f"{OUTPUT_DIR}/{r.name}", "resource_metadata.json")
 
             export_file_references(r, data['latest_version'])
