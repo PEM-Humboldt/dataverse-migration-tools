@@ -12,7 +12,9 @@ Principle (Marius, 10/11/2026): the migration is faithful to the source. It appl
 the source is left to the curation phase, and is written to the curation lists (curation_rows()).
 """
 import csv
+import json
 import re
+from calendar import monthrange
 from datetime import date
 from pathlib import Path
 
@@ -287,6 +289,17 @@ def vocabulary(tables, field, source):
             if r["field"] == field and r["source"] == source and r["dataverse_value"]}
 
 
+def _temporal_limit(value, *, upper=False):
+    """Devuelve un límite calendárico de una fecha ya validada por iso_date."""
+    year, *parts = map(int, value.split("-"))
+    if not parts:
+        return date(year, 12, 31) if upper else date(year, 1, 1)
+    month = parts[0]
+    if len(parts) == 2:
+        return date(year, month, parts[1])
+    return date(year, month, monthrange(year, month)[1] if upper else 1)
+
+
 def map_temporal(record, curation):
     """biologicalMetadata/temporalCoverage: Date (singleDateTime), Date Range (rangeOfDates), Formation period
     (gbif/formationPeriod). A date that is not YYYY, YYYY-MM or YYYY-MM-DD is left out and listed for curation."""
@@ -319,6 +332,15 @@ def map_temporal(record, curation):
                 entry["initialCalendarDate"] = begin
             if end:
                 entry["finalCalendarDate"] = end
+            if begin and end and _temporal_limit(begin) > _temporal_limit(end, upper=True):
+                curation.append({
+                    "resource": record["name"],
+                    "kind": "temporal_range_order",
+                    "field": "temporalCoverage",
+                    "value": json.dumps([begin, end], ensure_ascii=False),
+                    "note": "Fecha inicial posterior a la fecha final para la precisión registrada. "
+                            "Revisar el intervalo de origen.",
+                })
             if len(entry) > 1:
                 entries.append(entry)
     period = text(record["gbif"].get("formationPeriod"))
@@ -556,9 +578,9 @@ def map_external_references(record, curation):
 ACCESS_PATTERNS = ((re.compile(r"libre a nivel (?:interno y externo|externo e interno)"), OPEN_ACCESS),
                    (re.compile(r"libre (?:a|en) nivel interno"), INTERNAL_ACCESS),
                    (re.compile(r"restringido temporalmente"), RESTRICTED))
-# códigos de contratos de prestación de servicios: terminados en PS (23-22-444-279PS, 24-24-111-182 PS,
-# 22-22/444-22/444-279PS…) o con cuatro grupos de cifras sin sufijo (14-13-014-040); los demás (CE, FN, AA-NNN,
-# FP44842-109-2016…) son convenios u otros acuerdos
+# códigos de contratos de prestación de servicios (ejemplos sintéticos): terminados en PS (00-00-000-000PS, 00-00-000-001 PS,
+# 00-00/000-00/000-002PS…) o con cuatro grupos de cifras sin sufijo (00-00-000-003); los demás (CE, FN, AA-NNN,
+# FP00000-000-0004…) son convenios u otros acuerdos
 OTHER_CONTRACT = re.compile(r"\d\s?(FN|OS)$", re.I)  # contratos que no son de prestación de servicios
 PS_CODE = re.compile(r"\b[0-9A-Za-z][0-9A-Za-z/-]*-\d+\s?PS\b|\b\d{2}-\d{2}-\d{3,4}-\d{3,4}\b(?![\s-]?[A-Za-z])")
 
@@ -661,7 +683,7 @@ def map_projects(record, macro_index, curation):
 
 def same_name(a, b):
     """Whether two spellings name the same person: the words of one (without accents, case nor punctuation)
-    contain the words of the other, so that «Karina Muñoz Gómez» (inventory) = «Muñoz, Karina» (EML)."""
+    contain the words of the other, so that «Nombre Segundo Ficticio» (inventory) = «Nombre Ficticio» (EML)."""
     words_a, words_b = set(norm_key(a).split()), set(norm_key(b).split())
     shorter = min(words_a, words_b, key=len)
     return len(shorter) >= 2 and (words_a <= words_b or words_b <= words_a) or words_a == words_b
