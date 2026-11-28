@@ -538,6 +538,9 @@ def map_external_references(record, curation):
                              "value": identifier, "note": "URL mal escrita: no migrada"})
         elif OTHER_ID.search(identifier):
             entry["externalReferenceOtherId"] = identifier
+        elif re.match(r"^https?://", identifier, re.IGNORECASE):
+            curation.append({"resource": record["name"], "kind": "reference_url", "field": "externalReferenceURL",
+                             "value": identifier, "note": "URL mal escrita: no migrada"})
         entries.append(entry)
     biologico = (record["inventory"] or {}).get("biologico") or {}
     copy_doi = doi_of(str(biologico.get("doi") or ""))

@@ -1,6 +1,6 @@
 # Validación parcial del mapeo CEIBA–Dataverse
 
-Este informe acompaña el Draft Pull Request de `feature/validacion-ceiba-mapping` a `marbotte/ceiba-mapping-example`. Consolida la evaluación inicial, la validación de `geospatial` y la corrección INS-H20 de la asociación del inventario biológico, con los resultados y las decisiones pendientes.
+Este informe acompaña el Draft Pull Request #13 de `feature/validacion-ceiba-mapping` a `develop`, según la auditoría previa del PR. Consolida la evaluación inicial, la validación de `geospatial`, la corrección INS-H20 y la validación de `externalReferences` hasta la regresión de EXT-H02.
 
 ## Índice
 
@@ -11,13 +11,14 @@ Este informe acompaña el Draft Pull Request de `feature/validacion-ceiba-mappin
 5. [Resultados de citation](#resultados-de-citation)
 6. [Resultados de geospatial](#resultados-de-geospatial)
 7. [Personas e instituciones](#personas-e-instituciones)
-8. [Correcciones implementadas](#correcciones-implementadas)
-9. [Regresión y reporte de curación](#regresión-y-reporte-de-curación)
-10. [Pruebas unitarias](#pruebas-unitarias)
-11. [Herramienta de comparación de regresiones](#herramienta-de-comparación-de-regresiones)
-12. [Matriz de hallazgos pendientes](#matriz-de-hallazgos-pendientes)
-13. [Preguntas para Marius y el equipo](#preguntas-para-marius-y-el-equipo)
-14. [Próximas actividades](#próximas-actividades)
+8. [Resultados de externalReferences](#resultados-de-externalreferences)
+9. [Correcciones implementadas](#correcciones-implementadas)
+10. [Regresión y reporte de curación](#regresión-y-reporte-de-curación)
+11. [Pruebas unitarias](#pruebas-unitarias)
+12. [Herramienta de comparación de regresiones](#herramienta-de-comparación-de-regresiones)
+13. [Matriz de hallazgos pendientes](#matriz-de-hallazgos-pendientes)
+14. [Preguntas para Marius y el equipo](#preguntas-para-marius-y-el-equipo)
+15. [Próximas actividades](#próximas-actividades)
 
 ## Contexto y alcance
 
@@ -25,10 +26,12 @@ Este informe acompaña el Draft Pull Request de `feature/validacion-ceiba-mappin
 |---|---|
 | Repositorio | `PEM-Humboldt/dataverse-migration-tools` |
 | Rama de trabajo | `feature/validacion-ceiba-mapping` |
-| Rama base | `marbotte/ceiba-mapping-example` |
+| Rama de partida del desarrollo | `marbotte/ceiba-mapping-example` |
+| Base efectiva del PR según la auditoría previa | `develop` |
 | Draft Pull Request | [#13](https://github.com/PEM-Humboldt/dataverse-migration-tools/pull/13) |
-| Commit base histórico del Draft Pull Request | `449385271f8efd92894ba70785e95c2bead70ecd` |
+| Commit histórico de partida | `449385271f8efd92894ba70785e95c2bead70ecd` |
 | Commit de referencia de INS-H20 | `7d1e26204688569b88c0fab5b8627e752807deef` |
+| HEAD de referencia para la validación de `externalReferences` | `1c6148804f10ded29c99d751320baf530cf44150` |
 | Commit de los esquemas Dataverse | `ab2841405a24f149ff7fdb6264f179ede27c6e7c` |
 | Crosswalk de referencia | `MigracionCeiba_20261125.xlsx` |
 | Fecha de corte de la evaluación inicial | 26 de noviembre de 2026 |
@@ -36,9 +39,11 @@ Este informe acompaña el Draft Pull Request de `feature/validacion-ceiba-mappin
 | Corte documental anterior | 27 de noviembre de 2026 |
 | Fecha de corte de esta actualización | 28 de noviembre de 2026 |
 
-La evaluación fortalece la implementación desarrollada por Marius y conserva su arquitectura. Cubre los bloques `citation` y `geospatial` y los elementos relacionados con personas, instituciones y contratistas. La validación funcional de `geospatial` se completó para las reglas actuales. Quedan pendientes la revisión de los indicadores de coherencia geográfica y las evaluaciones de los elementos restantes de `institutional`, `externalReferences` y `biologicalMetadata`. El alcance se limita a la entrega parcial y no se ha realizado carga de datos en Dataverse.
+La evaluación fortalece la implementación desarrollada por Marius y conserva su arquitectura. Cubre `citation`, `geospatial`, `externalReferences` y los elementos relacionados con personas, instituciones y contratistas. Se completó la validación funcional de `geospatial` y `externalReferences` en los alcances documentados. Quedan pendientes los indicadores de coherencia geográfica, los elementos restantes de `institutional` y la validación funcional de `biologicalMetadata`. La carga efectiva en Dataverse queda fuera de esta entrega parcial.
 
-INS-H20 se validó en el árbol de trabajo local sobre el commit de referencia. Ese estado comprende dos archivos de producción modificados y una suite específica no rastreada. Los cuatro archivos no rastreados ajenos a INS-H20 permanecen fuera de la entrega. La regresión diferencial abarcó los cinco bloques para este cambio. El PASO 10.12.2.13.5.2.7 consolidó los resultados técnicos. El Draft Pull Request es la referencia de la entrega prevista. La publicación en GitHub y el cierre definitivo de INS-H20 siguen pendientes.
+INS-H20 se validó en el árbol de trabajo local sobre su commit de referencia. En ese corte, dos archivos de producción estaban modificados y la suite específica aún no estaba rastreada. Los cuatro archivos no rastreados ajenos al trabajo quedaron fuera de la entrega. La regresión diferencial abarcó los cinco bloques y el PASO 10.12.2.13.5.2.7 consolidó los resultados técnicos. Los cambios de INS-H20 quedaron registrados en el commit `1c6148804f10ded29c99d751320baf530cf44150`, que sirve como referencia para EXT-H02.
+
+En el corte del PASO 11.6, `externalReferences` cuenta con validación funcional completa, EXT-H02 corregido, regresión transversal aprobada y línea base consolidada. Se aprobaron **1381 controles obligatorios acumulados**. La suite automatizada cuenta por separado **343 casos**, con **341 aprobados y 2 `xfail` históricos**. Esta actualización prepara el cierre documental. La publicación conjunta del bloque en el Draft PR #13 y la aprobación institucional siguen pendientes. La base del PR se documenta según la auditoría previa.
 
 Los resultados cuantitativos proceden de las evaluaciones informadas. La FASE 11 consistió en una auditoría estática de solo lectura. Las cifras de pytest corresponden a las ejecuciones de pruebas sintéticas descritas en la sección de pruebas unitarias.
 
@@ -80,6 +85,8 @@ La **validación estructural** verifica campos, tipos, multiplicidad, obligatori
 Se priorizaron los problemas con impacto real y se limitaron los cambios preventivos. DATE-01 fue la excepción, dirigida a evitar la aceptación de fechas calendáricamente imposibles detectada con pruebas sintéticas.
 
 Para INS-H20 se compararon las asociaciones de inventario en todo el universo de ingesta y se verificó por separado el efecto sobre los recursos con JSON final. El diferencial se cotejó semánticamente por recurso, bloque y campo. La curación y los valores hijos se compararon con multiconjuntos para conservar las repeticiones. Se construyó una línea base posterior y se auditó contra sus archivos, el estado del código y las referencias previas.
+
+Para `externalReferences` se caracterizaron el TSV, el crosswalk y las salidas en el PASO 11.2. En el PASO 11.3 se reconstruyó el bloque a partir de los JSON de ingesta y del inventario adjunto. Los PASOS 11.4 y 11.5 aislaron el cambio de curación y lo comprobaron con pruebas sintéticas y una comparación en memoria. El PASO 11.6 regeneró únicamente las salidas de mapeo. Su resumen de validación, el comparador y el manifiesto documentan la regresión y la nueva línea base. La caracterización funcional y el ciclo sintético previo se citan como resultados de sus respectivos pasos.
 
 Las reevaluaciones conservan los antecedentes históricos y explicitan el universo, el criterio y la unidad de las mediciones posteriores. La [reconciliación de I03](#reconciliación-de-i03-en-projectfunding) distingue celdas fuente, ocurrencias de segmentos, recursos, valores Dataverse y párrafos HTML. Las cifras de esta actualización proceden de las ejecuciones y conciliaciones acreditadas. La edición fue documental.
 
@@ -358,6 +365,62 @@ No se establecieron asociaciones arbitrarias entre nombres y códigos. En los ca
 
 El efecto posterior de INS-H20 se documenta en la [regresión transversal](#regresión-transversal-de-ins-h20) y en la [matriz de hallazgos](#matriz-de-hallazgos-pendientes).
 
+## Resultados de externalReferences
+
+### Alcance, fuentes y esquema del bloque 4
+
+Se evaluaron los 1191 recursos de ingesta, de los cuales 1107 eran elegibles y 84 carecían de JSON final. El alcance comprende las filas 95 a 103 del crosswalk `MigracionCeiba_20261125.xlsx` y el esquema `externalReferences.tsv` del commit indicado en el contexto. La huella SHA-256 del TSV es `22019abe2e490d7d24cf8fe7956bf99bc0f20c996cb25125f6571ac5a9f4666a`.
+
+El padre `externalReference` es compuesto, opcional y repetible (`0..n`). Cada fila tiene nueve hijos posibles, opcionales y de cardinalidad `0..1`. En la tabla, «bibliografía» designa `additionalMetadata/metadata/gbif/bibliography/citation`. Sus identificadores proceden de `@identifier`.
+
+| Campo | Fuente | Regla de transformación | Cardinalidad por fila | Valores | Observaciones |
+|---|---|---|---|---:|---|
+| `externalReferenceType` | Procedencia de la fila | La referencia de origen y la copia DOI usan `External Copy of the dataset`. Las citas usan `This dataset references`. | `0..1` | 11077 | Único hijo con vocabulario controlado. |
+| `citationText` | Etiqueta fija de origen o texto de la bibliografía | Conserva la etiqueta de origen. Para citas, normaliza espacios, escapa el texto y lo envuelve en un párrafo HTML. | `0..1` | 10395 | La copia DOI del inventario carece de texto de cita. |
+| `externalReferenceURL` | Clave CEIBA y versión de origen, o identificador bibliográfico | Genera la URL de origen. Conserva las URL bibliográficas admitidas y añade `https://` a las formas `www.` reconstruibles. Aplica la codificación porcentual vigente. | `0..1` | 1559 | Las URL malformadas del alcance quedan en curación. |
+| `externalReferenceDOI` | Identificador bibliográfico o `inventory.biologico.doi` | Reconoce el patrón DOI y retira el prefijo del resolutor o de la etiqueta, y los puntos finales. | `0..1` | 1032 | 350 DOI bibliográficos y 682 de copia. |
+| `externalReferenceOtherId` | Clave del directorio CEIBA o identificador bibliográfico ISBN/ISSN | Conserva la clave de origen y los ISBN/ISSN con espacios normalizados. | `0..1` | 1176 | 1107 claves de origen y 69 ISBN/ISSN. |
+| `externalReferenceNote` | Texto fijo de origen | Indica que el recurso se migró desde el IPT CEIBA. | `0..1` | 1107 | La curación de URL se registra en el reporte separado. |
+| `externalEncoding` | Sin fuente aprobada | Se omite. | `0..1` | 0 | Información de archivos internos fuera de este campo. |
+| `externalFileFormat` | Sin fuente aprobada | Se omite. | `0..1` | 0 | El formato de archivo necesita corresponder a la referencia externa concreta. |
+| `externalFileFormatVersion` | Sin fuente aprobada | Se omite. | `0..1` | 0 | La versión del formato requiere la misma correspondencia. |
+
+`read_record()` y `gbif_metadata()` obtienen las fuentes. `source_reference()` genera la fila de origen, `map_external_references()` incorpora la bibliografía y la copia del inventario, y `doi_of()` reconoce y limpia los DOI. Se aplican `quote_urls()` y `drop_empty()` antes de reconstruir el compuesto para Dataverse. Los metadatos de archivos o distribuciones presentes en EML y GBIF se evaluaron por separado. Las filas 101 a 103 del crosswalk carecen de una fuente aprobada para describir el formato, su versión o la codificación de una referencia externa. [Fuentes CEIBA](../src/mapeo/ceiba/ceiba_source.py) · [Transformación](../src/mapeo/ceiba/ceiba_fields.py) · [Codificación de URL](../src/mapeo/geonetwork/gn_mapping.py) · [Reconstrucción](../src/mapeo/reconstruct_mapping.py)
+
+### Validación funcional y referencia de origen
+
+En el PASO 11.3 se reconstruyeron de manera independiente las **1107 listas** desde los JSON de ingesta, el inventario adjunto, las versiones de origen de `inventory.csv` y las reglas del TSV y del crosswalk. Se cotejaron la secuencia, el multiconjunto y la estructura nativa por recurso. Coincidieron **11077 referencias** y **26346 valores hijos**, con cero diferencias estructurales. El orden fue **1107 referencias de origen** en primera posición, **9288 citas bibliográficas** en su orden de ingesta y **682 copias DOI** en última posición cuando correspondía. Hubo 703 recursos con bibliografía y 404 sin bibliografía utilizable.
+
+Cada referencia de origen incluye el tipo fijo `External Copy of the dataset`, `citationText` igual a `IPT Ceiba (I2D)`, la URL de la página CEIBA con la clave del directorio y la versión de `inventory.csv`, esa misma clave en `externalReferenceOtherId` y la nota `Migrado desde IPT Ceiba (I2D)`. La versión de `inventory.csv` coincide con `source_version` de `load_plan.csv` en los 1107 recursos. La versión extraída de `@packageId` difirió textualmente de `inventory.csv` en **593** casos tras retirar el prefijo `v` cuando estaba presente. La diferencia documenta la procedencia de cada valor. La URL sigue la versión de `inventory.csv`, que es la fuente de la implementación vigente. El sufijo de versión del JSON pertenece al destino Dataverse.
+
+La sintaxis básica y los parámetros de las URL de origen se verificaron localmente. La resolución efectiva de URL y DOI queda fuera del alcance. La coincidencia con la implementación, el cumplimiento del crosswalk y la conservación de la fuente se comprobaron por separado. Esa distinción permitió identificar EXT-H02 aunque el JSON final coincidiera con la reconstrucción de la regla vigente.
+
+### Identificadores y multiplicidad bibliográfica
+
+| Identificadores presentes | Ocurrencias |
+|---|---:|
+| DOI | 350 |
+| URL HTTP/HTTPS admitidas | 450 |
+| URL `www.` reconstruidas | 2 |
+| URL `www.` malformada | 1 |
+| ISBN | 65 |
+| ISSN | 4 |
+| Identificadores HTTP/HTTPS omitidos | 4 |
+| Otra clase | 1099 |
+| **Total presente** | **1975** |
+
+Las otras **7313 citas** carecían de identificador. La clasificación aplica primero DOI, luego URL HTTP/HTTPS admitidas, formas `www.` reconstruibles o malformadas e ISBN/ISSN. Antes de EXT-H02, cuatro identificadores HTTP/HTTPS con espacios internos quedaban fuera del JSON y de la curación. La [corrección EXT-H02](#ext-h02) mantiene la omisión del campo URL y registra las cuatro ocurrencias para revisión.
+
+**EXT-H01.** Se encontraron **28 repeticiones adicionales en 20 recursos**. Veinticinco ya eran repeticiones exactas en la ingesta y tres resultaron de la normalización. En dos grupos los identificadores de origen eran distintos. Todas las ocurrencias finales tienen contraparte en la fuente. Se conserva el orden y la multiplicidad mientras se acuerda una política institucional de deduplicación.
+
+**EXT-H04.** Se cotejó el HTML esperado y, mediante extracción de su contenido, el texto normalizado de las **9288 citas**. Todas conservaron el texto disponible en el JSON de ingesta. El hallazgo queda técnicamente cerrado para JSON de ingesta CEIBA → JSON final Dataverse. El XML original queda fuera de ese cotejo. Los casos sintéticos de texto anidado y delimitadores reservados caracterizan el comportamiento vigente para formas fuera de las observadas, con alcance distinto de las reglas institucionales.
+
+### DOI del inventario y GBIF dataset key
+
+De **1046** valores no vacíos en el campo DOI del inventario se reconocieron **682**, cada uno en una copia de tipo `External Copy of the dataset` al final del compuesto. Entre los **364** valores no reconocidos, **353** coincidieron con la lista léxica estricta de marcadores y **11** quedaron fuera de esa clasificación. Los once incluyen diez textos libres o etiquetas y un token con apariencia DOI en un contexto distinto. La clasificación de marcadores es léxica. La ausencia semántica y el valor con apariencia DOI requieren revisión de fuente. El antecedente de los siete DOI no reconocidos de INS-H20 corresponde a un subconjunto y se conserva en su corte histórico.
+
+**EXT-H03.** `gbif_key` tiene 1045 valores con contenido y 682 con forma UUID. Por recurso, **681** presentan DOI reconocido y UUID, **1** solo DOI reconocido, **1** solo UUID y **424** ninguno de esos dos valores reconocidos. Un UUID y un DOI pueden coexistir sin acreditar la misma identidad. El inventario adjunto conserva los valores en `inventory_data`. La fila 99 del crosswalk deja la asignación como opción no decidida y el destino institucional permanece abierto.
+
 ## Correcciones implementadas
 
 ### DATE-01
@@ -431,6 +494,20 @@ La vista usa el identificador original del directorio para adjuntar la fila recu
 `tests/test_ceiba_inventory_resolution.py` es un módulo nuevo de **355 líneas, 9 funciones y 25 casos**. Su copia no rastreada se verificó por separado del diff.
 
 Los cambios de producción de INS-H20 se limitaron a `src/formato/ceiba_format.py` y `src/ingest/ceiba_ingest.py`. El cambio directo ocurre en la asociación del inventario durante la ingesta. Los proyectos, contratistas, condiciones de acceso y referencias externas cambian como efecto de las filas biológicas recuperadas que consume el mapeador vigente. La huella de `src/mapeo/ceiba/ceiba_fields.py` se conservó durante la evaluación de INS-H20.
+
+### EXT-H02
+
+La fila 97 del crosswalk establece que una URL mal escrita se omite y se registra para curación. La rama anterior solo generaba ese registro para formas malformadas que comenzaban por `www.`. En el universo evaluado, cuatro identificadores con prefijo HTTP/HTTPS y espacios internos quedaban fuera de la regla de admisión y de la curación.
+
+La corrección añade este fragmento al final de la clasificación de identificadores en `map_external_references()`. Así preserva la precedencia de DOI, URL admitidas, `www.` e ISBN/ISSN, incluida la clasificación previa de identificadores híbridos. Conserva `citationText` y la omisión de `externalReferenceURL`. Registra una fila por ocurrencia con el valor normalizado por la regla existente. La reparación del destino y la separación de enlaces quedan para revisión. [Código del mapeo CEIBA](../src/mapeo/ceiba/ceiba_fields.py)
+
+```python
+        elif re.match(r"^https?://", identifier, re.IGNORECASE):
+            curation.append({"resource": record["name"], "kind": "reference_url", "field": "externalReferenceURL",
+                             "value": identifier, "note": "URL mal escrita: no migrada"})
+```
+
+La comparación en memoria preservó las tres filas históricas de `reference_url` y añadió cuatro en tres recursos. El balance de siete filas incluye dos reparaciones y cinco omisiones. La [regresión transversal](#regresión-transversal-de-ext-h02) reprodujo las cuatro adiciones exactas y verificó cero cambios en las referencias migradas. **EXT-H02 queda técnicamente cerrado** con esa regresión aprobada.
 
 ## Regresión y reporte de curación
 
@@ -587,6 +664,76 @@ Los respaldos, las líneas base y sus evidencias se conservan localmente y queda
 
 Las reevaluaciones posteriores verificaron las huellas de los manifiestos y el subconjunto de archivos necesario para cada contraste. La comprobación integral de 8107 entradas y 6996 tamaños corresponde a la auditoría anterior. En esta edición se cotejaron las huellas de los manifiestos como referencias de integridad.
 
+### Regresión transversal de EXT-H02
+
+El 28 de noviembre de 2026 se cotejaron los **3494 archivos vigentes de datos y reportes** con INS-H20 por ruta relativa, tamaño y SHA-256. La coincidencia completa permitió reutilizar esa línea base como respaldo. Se ejecutó el punto de entrada CEIBA sin `--with-files` y con la ingesta existente.
+
+```bash
+.venv/bin/python -B -m src.mapeo.ceiba_metadata_mapping
+```
+
+El mapeo duró **6,127 segundos**, salió con código **0**, generó 1107 JSON y registró 27 borradores, 84 recursos omitidos y cero problemas de mapeo. Se preservaron los **2382 archivos de ingesta**, con 1191 `resource_metadata.json` y 1191 `files.json`, sin altas, bajas ni cambios de contenido.
+
+El comparador institucional devolvió estado `complete` con **1107 JSON idénticos, 0 modificados, 0 altas, 0 bajas y 0 sin comparar**. El cotejo independiente confirmó que los 1107 eran idénticos byte a byte y semánticamente. Cada uno de los cinco bloques, `citation`, `geospatial`, `institutional`, `externalReferences` y `biologicalMetadata`, coincidió en presencia, campos, valores, tipos, orden, multiplicidad y estructura. También se conservaron `inventory_data` y las opciones de `datasetVersion`. La igualdad de `biologicalMetadata` corresponde a la regresión diferencial. Su validación funcional sigue pendiente.
+
+| Reporte | Comparación con INS-H20 | Resultado |
+|---|---|---|
+| `inventory.csv` | Identidad binaria y semántica | 1191 claves únicas |
+| `load_plan.csv` | Identidad binaria y semántica | 1107 claves únicas |
+| `version_dates.csv` | Identidad binaria y semántica | 1107 claves únicas |
+| `mapping_problems.json` | Identidad binaria y semántica | 0 problemas |
+| `curation.csv` | Comparación de las cinco columnas por multiconjunto | Solo cuatro adiciones de EXT-H02 |
+
+La bitácora registró cero advertencias, errores y eventos críticos. El proceso emitió dos líneas por `stderr` cuyo texto no se conservó. Una lectura aislada del inventario reprodujo un `UserWarning` de `openpyxl` sobre las definiciones de dependencias del libro. La causa de las dos líneas originales sigue indeterminada. El primer intento del verificador diferencial se detuvo al resolver la ruta temporal de macOS. La verificación posterior fue satisfactoria y el mapeo se ejecutó una sola vez.
+
+### Curación posterior a EXT-H02
+
+El corte de INS-H20 conserva sus **1348 filas**. El corte de EXT-H02 contiene **1352**. Se preservaron las 1348 filas históricas, incluido su orden relativo. Hubo cuatro adiciones, cero eliminaciones y cero modificaciones. Las nuevas filas corresponden exactamente a EXT-H02 en tres recursos. Dos ya tenían curación y uno se incorporó por primera vez.
+
+| Indicador | INS-H20 | EXT-H02 |
+|---|---:|---:|
+| Filas de curación | 1348 | 1352 |
+| Recursos únicos con curación | 912 | 913 |
+| Recursos sin curación | 195 | 194 |
+| Reparaciones en `reference_url` | 2 | 2 |
+| Omisiones en `reference_url` | 1 | 5 |
+
+| Categoría | INS-H20 | EXT-H02 |
+|---|---:|---:|
+| `author_review` | 8 | 8 |
+| `bounding_box` | 37 | 37 |
+| `collection_codes` | 154 | 154 |
+| `collection_identifier` | 4 | 4 |
+| `contact_email` | 31 | 31 |
+| `contract_code` | 9 | 9 |
+| `contractor_association` | 191 | 191 |
+| `date` | 1 | 1 |
+| `private_draft` | 27 | 27 |
+| `publication_date` | 758 | 758 |
+| `reference_url` | 3 | 7 |
+| `restricted_until` | 32 | 32 |
+| `restriction_reason` | 91 | 91 |
+| `terms_of_use` | 2 | 2 |
+| **Total** | **1348** | **1352** |
+
+### Línea base posterior a EXT-H02
+
+La línea base vigente es `../linea_base_correccion_ext_h02/`, de acceso local restringido. El SHA-256 de su `manifest.json` es `a5d89a1842596a389f419552080753b8571cf53c7e6de766a9874a363d3f39b3`.
+
+| Componente | Archivos | Bytes |
+|---|---:|---:|
+| `ingesta/` | 2382 | 45172461 |
+| `mapeo/` | 1107 | 56923749 |
+| `reportes/` | 5 | 893350 |
+| `codigo/` | 3 | 62751 |
+| `evidencias/` | 6 | 84160 |
+| `README.md` | 1 | 1165 |
+| **Total registrado** | **3504** | **103137636** |
+| `manifest.json` | 1 | 609910 |
+| **Total físico** | **3505** | **103747546** |
+
+La captura de código reúne el archivo de producción, la suite específica y el parche de EXT-H02. Su alcance se limita a esos archivos del repositorio. Se verificaron copias, tamaños, hashes, exhaustividad del manifiesto y ausencia de enlaces simbólicos. Las evidencias incluyen `git_state.json`, `environment.json`, `validation_summary.json`, el resumen y el detalle del comparador, y `verificaciones.txt`. Los datos, las rutas de recursos del manifiesto y las diferencias detalladas permanecen fuera de Git. La edición del PASO 11.7 cotejó las huellas y las evidencias agregadas.
+
 ## Pruebas unitarias
 
 ### Suite geográfica
@@ -617,6 +764,17 @@ La selección posterior incluye 25 casos de INS-H20. La inspección estática id
 | `test_recovery_keeps_access_license_and_publication_rules` | 3 | Conservar las opciones de acceso, licencia y borrador, y verificar la fecha recuperada en el caso restringido. |
 | `test_ingest_uses_all_directories_and_logs_only_aggregate_resolution_counts` | 1 | Verificar la integración con todos los directorios, incluidos los nunca publicados, y los conteos agregados. |
 
+### Suite externalReferences
+
+El módulo `tests/test_ceiba_external_references.py` contiene **13 funciones**, con siete parametrizadas que aportan **39 casos** y seis individuales, para **45 casos**. Cubre la referencia de origen, la bibliografía y su multiplicidad, la precedencia de identificadores, la curación de URL, la copia DOI y la reconstrucción del compuesto. [Suite de externalReferences](../tests/test_ceiba_external_references.py)
+
+| Ejecución específica del PASO 11.5 | Casos | Aprobados | Fallidos |
+|---|---:|---:|---:|
+| Antes de la corrección | 45 | 35 | 10 |
+| Después de la corrección | 45 | 45 | 0 |
+
+Los diez fallos iniciales detectaron exclusivamente la falta de curación. Ocho cubrieron variantes HTTP/HTTPS, uno comprobó ocurrencias repetidas y otro ejercitó la integración del compuesto. El contenido de las referencias generadas coincidió en esos casos.
+
 ### Regresión acumulada de la selección
 
 | Hito de ejecución | Módulos | Casos | Aprobados | `xfail` estrictos | Fallos inesperados |
@@ -624,8 +782,11 @@ La selección posterior incluye 25 casos de INS-H20. La inspección estática id
 | Validación anterior a la suite geográfica | 12 | 230 | 228 | 2 | 0 |
 | Regresión previa a INS-H20 | 13 | 273 | 271 | 2 | 0 |
 | Regresión posterior a INS-H20 | 14 | 298 | 296 | 2 | 0 |
+| Regresión posterior a EXT-H02 | 15 | 343 | 341 | 2 | 0 |
 
 La selección previa registró **1,31 s** para 273 casos y contiene 131 funciones según la inspección estática. La documentación de esa ejecución registra macOS, Python 3.13.2 y pytest 9.2.0. La captura de entorno de la línea base posterior coincide en esas versiones. La equivalencia completa entre entornos históricos quedó fuera de la verificación.
+
+La siguiente tabla conserva el desglose del corte histórico posterior a INS-H20.
 
 | Módulo bajo `tests/` | Funciones | Casos |
 |---|---:|---:|
@@ -647,7 +808,7 @@ La selección previa registró **1,31 s** para 273 casos y contiene 131 funcione
 
 Los conteos por módulo proceden de la inspección del código mediante AST. Los resultados de ejecución proceden de la documentación histórica y del resumen de validación de la línea base. Los dos `xfail` estrictos preceden a INS-H20. DESC-H01 documenta la pérdida del marcado de énfasis y NOTE-H02 documenta el texto directo de `additionalInfo` sin `para`. Ambos limitan el fallo esperado a `AssertionError`.
 
-Los 25 casos específicos de INS-H20 están incluidos en los 298 casos de la selección posterior. Las pruebas automatizadas, los 17 criterios de aceptación técnica y los controles de auditoría se contabilizan por separado. Los resultados de ejecución corresponden al registro histórico.
+Los 25 casos específicos de INS-H20 están incluidos en los 298 de ese corte. El PASO 11.6 conserva esos casos e incorpora los 45 de `externalReferences`. La evidencia de ejecución registra **341 aprobados, 2 `xfail` históricos, 0 fallos inesperados, 0 `xpass` y 0 nuevas exclusiones**. Las pruebas automatizadas, los 17 criterios históricos de aceptación técnica de INS-H20 y los controles de auditoría se contabilizan por separado.
 
 Se excluyeron `tests/test_ceiba_mapping.py` y `tests/test_integracion_ceiba_dataverse.py`, que importan `src.mapeo.ceiba_mapping`, y `tests/test_validar_integracion_ceiba.py`, que importa `src.mapeo.validar_integracion_ceiba`. Esos módulos de producción están ausentes del árbol actual.
 
@@ -706,6 +867,16 @@ tests/test_ceiba_inventory_resolution.py \
 -v --tb=short -p no:cacheprovider
 ```
 
+El comando de la selección vigente corresponde a la ejecución registrada en la evidencia del PASO 11.6.
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -B -m pytest tests/ \
+  --ignore=tests/test_ceiba_mapping.py \
+  --ignore=tests/test_integracion_ceiba_dataverse.py \
+  --ignore=tests/test_validar_integracion_ceiba.py \
+  -p no:cacheprovider -q --tb=short -r xX
+```
+
 ## Herramienta de comparación de regresiones
 
 [`scripts/compare_ceiba_mapping.py`](../scripts/compare_ceiba_mapping.py) recibe como argumentos posicionales el directorio de línea base, el de resultados actuales y el de reportes, en ese orden. Cada entrada debe contener `load_plan.csv`, `version_dates.csv`, `curation.csv` y `mapping_problems.json` en su raíz. Por defecto busca los registros `*-1.0.json` en `metadata/`. `--metadata-subdir` permite indicar un subdirectorio relativo común a ambas entradas, o `.` cuando los JSON están en la raíz.
@@ -761,7 +932,7 @@ La prioridad es una propuesta para organizar la revisión. **Alta** identifica d
 | PER-H37 | Se generaron afiliaciones redundantes. | 2 afiliaciones en 1 recurso. | Añade información repetida al destino. | Baja | Confirmado. | Revisar el origen de la redundancia antes de modificar la regla. |
 | PER-H38 | Hay diferencias de afiliación entre apariciones deduplicadas. | 36 conflictos. | La primera aparición puede conservar una afiliación distinta de otra fuente. | Media | Confirmado, revisión semántica pendiente. | Acordar si se mantiene la precedencia o se envían los conflictos a curación. |
 | PER-H39 | Hay diferencias de correo entre apariciones deduplicadas. | 2 conflictos. Uno coincide con un conflicto de afiliación. | Puede prevalecer un correo distinto del que corresponda usar. | Media | Confirmado, revisión semántica pendiente. | Revisar las fuentes y acordar precedencia o curación. |
-| INS-H20 | La búsqueda literal impedía asociar filas biológicas con variantes de espacios o capitalización. | 1088 asociaciones originales conservadas, 65 recuperadas, 64 de ellas con JSON final, y 38 ausencias residuales. | Aumenta la cobertura del inventario y cambia los valores derivados que se documentan en la regresión. | Por reevaluar | **Corrección implementada y validación técnica local aprobada.** Publicación y cierre definitivo pendientes. | Completar la auditoría de publicación y gestionar las ausencias residuales mediante PER-H25. |
+| INS-H20 | La búsqueda literal impedía asociar filas biológicas con variantes de espacios o capitalización. | 1088 asociaciones originales conservadas, 65 recuperadas, 64 de ellas con JSON final, y 38 ausencias residuales. | Aumenta la cobertura del inventario y cambia los valores derivados que se documentan en la regresión. | Por reevaluar | **Corrección implementada y validación técnica aprobada.** Corte de código registrado en `1c61488`. | Gestionar las ausencias residuales mediante PER-H25. |
 
 El PASO 10.12.2.13.5 reevaluó los seis hallazgos relacionados. PER-H25 conserva el antecedente de 80 recursos publicados sin datos de inventario. La reconstrucción reproduce esa cifra en el universo elegible con el criterio documentado en la matriz. La equivalencia con el procedimiento histórico queda indeterminada. Los seis hallazgos permanecen abiertos para decisión institucional.
 
@@ -780,6 +951,17 @@ Los hallazgos geográficos pueden corresponder al mismo recurso. Sus cantidades 
 | GEO-H07 | Un rectángulo aceptado es compatible con un posible intercambio de latitud y longitud. | 1 recurso con mención de Colombia y longitudes positivas. La geometría es consistente con la hipótesis de intercambio. | El intercambio, si se confirma, alteraría la ubicación asignada a la cobertura. | Alta | Hipótesis diagnóstica, pendiente de revisión individual. | Revisar la fuente y el alcance del recurso, conservando las coordenadas originales durante la revisión. |
 | GEO-H08 | Hay rectángulos aceptados fuera de la referencia aproximada de Colombia. | 4 rectángulos fuera de la referencia. 1 menciona Colombia. | Puede haber una discrepancia entre la cobertura y lo que declara la descripción. | Media | Indicador diagnóstico, pendiente de revisión individual. | Evaluar la coherencia con la cobertura real de los recursos. |
 | GEO-H09 | Una cobertura puntual queda fuera de la referencia aproximada de Colombia. | 1 de 26 puntos evaluados. Ya figura en curación por área cero. | La ubicación del punto puede revisarse en la fila existente. | Baja | Indicador diagnóstico sobre un caso ya registrado en curación. | Revisar junto con el tratamiento de coberturas puntuales. |
+
+### Hallazgos de externalReferences
+
+| ID | Descripción | Evidencia | Impacto | Prioridad | Estado | Recomendación |
+|---|---|---|---|---|---|---|
+| EXT-H01 | Hay repeticiones bibliográficas exactas en el destino. | 28 repeticiones en 20 recursos. De ellas, 25 proceden de la ingesta y tres resultan de la normalización. | Deduplicar podría retirar ocurrencias de origen o combinar identificadores distintos. | Baja | Abierto, pendiente de política institucional. | Conservar multiplicidad y orden hasta acordar los criterios de deduplicación. |
+| EXT-H02 | Cuatro identificadores HTTP/HTTPS malformados quedaban sin curación. | Se añadieron cuatro filas en tres recursos. Las 1107 listas finales permanecieron idénticas. | Los identificadores omitidos quedan disponibles para revisión. | Media | **Cerrado técnicamente.** Corrección implementada y regresión aprobada. | Mantener la cobertura de curación y revisar los destinos de forma individual. |
+| EXT-H03 | El destino de GBIF dataset key es una opción no decidida. | 682 valores con forma UUID. Coexisten con un DOI reconocido en 681 recursos. | El valor queda en el inventario adjunto. Hace falta una regla para asignarlo al bloque. | Baja | Abierto, pendiente de definición institucional. | Acordar campo, tipo de referencia y criterio de identidad antes de mapear. |
+| EXT-H04 | Se evaluó la conservación textual de la bibliografía. | Las 9288 citas conservan el texto disponible en la ingesta. | El cotejo acredita la transformación a HTML desde el JSON intermedio. | Baja | **Cerrado técnicamente para ingesta JSON → destino JSON.** | Acordar si el equipo requiere un cotejo desde XML original, incluido el contenido anidado. |
+
+Las diferencias textuales de versión, el token de inventario con apariencia DOI y los comportamientos sintéticos de texto anidado y codificación se mantienen como observaciones de alcance en [Resultados de externalReferences](#resultados-de-externalreferences).
 
 ### Hallazgos de auditoría previa a publicación
 
@@ -808,7 +990,7 @@ Estas observaciones delimitan la cobertura técnica y las decisiones pendientes.
 
 ### Conciliación del acumulado de controles
 
-El corte histórico de **1008 controles obligatorios aprobados** corresponde al PASO 10.12.2.13.3. El registro conciliado incorpora los aportes posteriores hasta el corte previo a esta edición.
+El corte histórico de **1008 controles obligatorios aprobados** corresponde al PASO 10.12.2.13.3. El registro conciliado de INS-H20 incorpora los aportes posteriores hasta el corte de 1267.
 
 | Paso | Aporte | Acumulado |
 |---|---:|---:|
@@ -826,7 +1008,17 @@ El acumulado anteriormente informado de **1240** se rectificó a **1241** para e
 
 El I03 de PER-H26 verificó la financiación Macro y la clasificación de tramos en la cohorte elegible. El I03 original de PER-H27, sobre los párrafos adicionales de convenios, y el G01 original de la auditoría documental, sobre el acumulado, conservan sus estados históricos en revisión. Se registran sus respectivas conciliaciones en los pasos 10.12.2.13.5.2.5.1 y 10.12.2.13.5.3.1.1. Cada conciliación contribuye una sola vez. La resolución del control original se documenta sin añadir otra aprobación.
 
-Los **1267 controles obligatorios aprobados** corresponden al corte previo a esta edición. Los controles informativos, el control histórico no evaluable y los controles de esta edición quedan fuera de ese total. Las verificaciones periódicas de integridad se contabilizan por paso. Los reintentos dentro de un mismo paso se excluyen del acumulado.
+Los **1267 controles obligatorios aprobados** corresponden al corte documental anterior de INS-H20. Las verificaciones periódicas de integridad se contabilizan por paso. Los reintentos dentro de un mismo paso, los controles informativos y los no evaluables se excluyen del acumulado.
+
+El PASO 11.2 partió de un acumulado informado de **1310** controles. Ese subtotal se conserva como referencia de partida sin asignar un desglose a los pasos intermedios. El resumen de validación de la línea base EXT-H02 acredita los 20 controles del PASO 11.6 y el acumulado de **1381**. Los 343 casos de pytest se contabilizan por separado.
+
+| Corte | Controles aprobados en el paso | Acumulado |
+|---|---:|---:|
+| Antes del PASO 11.2 | — | 1310 |
+| PASO 11.2 · Caracterización | 13 | 1323 |
+| PASO 11.3 · Validación funcional | 24 | 1347 |
+| PASOS 11.4 y 11.5 · Corrección y pruebas | 14 | 1361 |
+| PASO 11.6 · Regresión y línea base | 20 | **1381** |
 
 ## Preguntas para Marius y el equipo
 
@@ -854,6 +1046,12 @@ Los **1267 controles obligatorios aprobados** corresponden al corte previo a est
 22. ¿Qué evidencia de impacto justificaría flexibilizar la capitalización de los códigos contractuales?
 23. ¿Se acepta el alcance local validado de INS-H20 para preparar su entrega y gestionar las ausencias residuales mediante PER-H25?
 24. ¿Puede el equipo acreditar la procedencia y autorización de los ejemplos históricos identificados en DOC-H02, o conviene sustituirlos por ejemplos inequívocamente sintéticos antes de publicar?
+25. ¿Se conserva la multiplicidad de las citas bibliográficas o se adopta una política de deduplicación? De las 28 repeticiones adicionales, 25 ya estaban presentes en la ingesta y tres aparecen después de normalizar. Dos grupos tienen identificadores distintos en origen.
+26. ¿Qué campo y tipo de referencia, si corresponde, deben recibir GBIF dataset key? Hay 682 valores con forma UUID y 681 coexisten con un DOI reconocido.
+27. ¿Qué clases de identificadores bibliográficos adicionales deben migrarse o enviarse a curación? Se observaron 1099 valores de otra clase, entre ellos formas con apariencia de URL o DOI.
+28. ¿Qué evidencia del inventario permitiría reconocer un DOI cuyo token tiene la forma esperada pero se presenta en un contexto distinto? Se observó un caso de ese tipo entre los once valores fuera de la lista estricta de marcadores.
+29. ¿Se ratifica `inventory.csv` como fuente de la versión en las URL de origen CEIBA? La versión extraída de `@packageId` difirió textualmente en 593 casos y la versión de `inventory.csv` coincidió con el plan de carga en los 1107 recursos.
+30. ¿Se requiere verificar las citas de `externalReferences` desde el XML original y qué contenido anidado o marcado debe preservarse? La comprobación actual cubre las 9288 citas desde el JSON de ingesta.
 
 Estas preguntas quedan abiertas para concertación. Las recomendaciones de la matriz orientan la revisión y no constituyen autorizaciones de cambio.
 
@@ -869,15 +1067,14 @@ Estas preguntas quedan abiertas para concertación. Las recomendaciones de la ma
 6. Conciliar I03.
 7. Conciliar el acumulado de controles.
 8. Incorporar localmente los resultados al documento acumulativo.
+9. Completar la caracterización y la validación funcional de `externalReferences`.
+10. Corregir EXT-H02 y aprobar sus pruebas y la regresión transversal.
+11. Consolidar y verificar la línea base posterior a EXT-H02.
 
 ### Actividades pendientes
 
-1. Verificar de forma independiente el Markdown actualizado.
-2. Realizar la auditoría previa a la publicación, revisar la confidencialidad de los archivos candidatos y acordar el tratamiento de DOC-H02.
-3. Preparar el staging selectivo de los archivos autorizados.
-4. Crear el commit de INS-H20.
-5. Publicar el commit en la rama de trabajo.
-6. Verificar la actualización en GitHub y en el Draft Pull Request.
-7. Completar el cierre definitivo de INS-H20 con el equipo.
-8. Continuar la evaluación institucional pendiente cuando se autorice. Incluye los elementos restantes de `institutional`, `externalReferences` y `biologicalMetadata`, y la concertación sobre los casos geográficos señalados, las coberturas puntuales y lineales y el formato de las descripciones.
-9. Ejecutar la regresión integral cuando los bloques pendientes cuenten con criterios acordados. Consolidar las pruebas y la documentación final, realizar la entrega técnica y cerrar el proyecto.
+1. Publicar `externalReferences` en el Draft PR #13 después del cierre documental y de la revisión de confidencialidad de los archivos candidatos, incluido el tratamiento de DOC-H02.
+2. Caracterizar y validar funcionalmente `biologicalMetadata`.
+3. Consolidar la evaluación de los cinco bloques, incluidos los elementos restantes de `institutional`, y ejecutar la regresión integral con los criterios acordados.
+4. Consolidar las pruebas y preparar la documentación final del proyecto.
+5. Revisar con el equipo las decisiones institucionales pendientes, incluidos los indicadores geográficos, las coberturas puntuales y lineales, el formato de las descripciones y las actividades de integración.
